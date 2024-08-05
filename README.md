@@ -1,5 +1,27 @@
 # Bootstrapping-Estimators-based-on-the-Block-Maxima-Method
 
+**NOTIZEN FÜR DICH SELBST**
+
+-   fixed r: mean und Fréchet
+
+-   fixed n: Fréchet
+
+    -   bst DONE
+
+    -   est DONE
+
+    -   Auswertung fehlt!
+
+-   Runtime Comparison: DONE
+
+-   case Study: DONE
+
+-   Anleitung, wie das zu nutzen ist: Auch wie das Projekt geht
+
+    -   Sourcen im HPC ansprechen und in Files schreiben, was gesourced werden muss
+
+**NOTIZEN ENDE**
+
 This repository contains the code used to generate the simulation and case studies of the paper: Bücher, Staud (2024): Bootstrapping Estimators based on the Block Maxima Method.
 
 The structure is as follows:

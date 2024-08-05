@@ -283,8 +283,8 @@ cBandsPlot <-
 plotTib %>% 
   filter(param == "shape") %>% 
   ggplot(aes(x = dateInd, val, col = ciType))+
-  geom_line()+
-  geom_line(data= plotTib, aes(x = dateInd, y = data*5), col = "black")+
+  geom_line(col = "black")+
+  geom_line(data= plotTib, aes(x = dateInd, y = data*5), col = "darkblue")+
   geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2,
               linewidth = 0.9)+
   facet_wrap(~type)+
