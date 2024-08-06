@@ -1,10 +1,13 @@
-//CFctns.cpp
+
 #include <Rcpp.h>
-using namespace Rcpp;
-#include <cstdlib>  // Für strtod
-//Abschnitt 0: Allgemine Hilfsfunktionen
+#include <cstdlib>  // For strtod
+#include <functional>
+
 using namespace Rcpp;
 
+
+//0: Auxiliary functions
+// Convert Character vector to numeri vector
 // [[Rcpp::export]]
 NumericVector convert_to_doubles(CharacterVector char_vec) {
   int n = char_vec.size();
@@ -15,9 +18,9 @@ NumericVector convert_to_doubles(CharacterVector char_vec) {
     char* endptr;
     double val = std::strtod(str.c_str(), &endptr);
     
-    // Überprüfen, ob die Konvertierung erfolgreich war
+
     if (endptr == str.c_str()) {
-      // Keine Konvertierung möglich, ungültige Zahl
+
       num_vec[i] = NA_REAL;
     } else {
       num_vec[i] = val;
@@ -27,8 +30,9 @@ NumericVector convert_to_doubles(CharacterVector char_vec) {
   return num_vec;
 }
 
-// ABSCHNITT 1: HILFSFUNKTIONEN UM ZEITREIHEN ZU SAMPLEN
-// set seed
+// 1: Auxiliary functions to sample from time series
+
+
 // sets the r-seed
 // [[Rcpp::export]]
 void set_seed(double seed) {
@@ -188,11 +192,11 @@ Rcpp::NumericVector rMDepSumC(
   return(xx);
 }
 
- // creates a time series sample from the following models: 1: i.i.d.
+ // generates a time series sample from the following models: 1: i.i.d.
  //   2: m-dependent time series, 3: beta-armax time series with GPD-gamma or 
  //   NORM marginals.
  // manual: marginal = 1 means: GPD gamma marginal; marginal = 2 means: NORM marginal
- //  tsMod: 1= IID, 2= MDEP-m, 3=ARMAX-beta [missing!]
+ //  tsMod: 1= IID, 2= MDEP-m, 3=ARMAX-beta
 // [[Rcpp::export]]
 Rcpp::NumericVector rtsC(
     int n, int m, int marginal, int tsMod, double gamma, 
@@ -224,9 +228,7 @@ Rcpp::NumericVector rtsC(
 
 
 
- // gives the "true" mean of a block maximum of a MDep time series excerpt with 
- //  GPD-gamma marginals.
- // missing: specify tsMod argument: "IID" or "MDEP" (later on maybe "ARMAX")
+ // gives the "true" mean of a block maximum
 // [[Rcpp::export]]
 double getTruthC(int r, int marginal, int tsMod, 
                  double gamma, int N, double beta){
@@ -248,9 +250,11 @@ double getTrueVarC(int r, int marginal, int tsMod, double gamma, int N, double b
   }
   return(v/N);
 }
-// ABSCHNITT 2: HILFSFUNKTIONEN FUER MLE FUNKTION 
+// 2: Auxiliary functions for the Frechet MLE
+
+
+// calcuate psiK, where xx is a plain vector
 //[[Rcpp::export]]
-// berechnet psiK, wobei der Vektor xx ein einfacher numerischer Vektor ist
 double psiKC(double a, Rcpp::NumericVector xx){
   double s1, s2, s3, n;
   s1 = 0;
@@ -267,27 +271,10 @@ double psiKC(double a, Rcpp::NumericVector xx){
   double res = 1/a + s1/s2 - s3/n;
   return(res);
 }
+
+
+// calcuate psiK, where xx is an unlisted lTable with named vectors (tables) as elements
 //[[Rcpp::export]]
-// berechnet psiK, wobei der Vektor xx ein unlisted ltable ist
-double psiKCTab(double a, Rcpp::NumericVector xx){
-  double s1, s2, s3, n;
-  s1 = 0;
-  s2 = 0;
-  s3 = 0;
-  n = 0;
-  for(int ind = 0; ind < xx.length()/2; ind++){
-    s1 += xx[2*ind+1]*std::pow(xx[2*ind], -a)*std::log(xx[2*ind]);
-    //std::cout << "s1" << s1;
-    s2 += xx[2*ind+1]*std::pow(xx[2*ind], -a);
-    s3 += xx[2*ind+1]*std::log(xx[2*ind]);
-    n += xx[2*ind+1];
-  }
-  double res = 1/a + s1/s2 - s3/n;
-  return(res);
-}
-//[[Rcpp::export]]
-// berechnet psiK, wobei der Vektor xx ein unlisted ltable ist, 
-//  was named vectors beinhaltet
 double psiKCVec(double a, Rcpp::NumericVector xx){
   double s1, s2, s3, n;
   s1 = 0;
@@ -306,8 +293,8 @@ double psiKCVec(double a, Rcpp::NumericVector xx){
   return(res);
 }
 
+// Calculate hat sigma if hat alpha has already been calculated: xx is a plain numeric vector
 //[[Rcpp::export]]
-// Berechnet hatsigma, wenn hatAlpha bereits berechnet wurde: xx ist ein numerischer vektor -nicht ge lTabled!-
 double hatSigmaCPlain(double hatA, Rcpp::NumericVector xx){
   double s, n;
   s = 0;
@@ -320,21 +307,8 @@ double hatSigmaCPlain(double hatA, Rcpp::NumericVector xx){
 }
 
 
+// Calculate hat sigma if hat alpha has already been calculated: xx is an unlisted lTable with tables (named vectors) as elements
 //[[Rcpp::export]]
-// Berechnet hatsigma, wenn hatAlpha bereits berechnet wurde: xx ist ein unlisted lTable
-double hatSigmaC(double hatA, Rcpp::NumericVector xx){
-  double s, n;
-  s = 0;
-  n = 0;
-  for(int ind = 0; ind < xx.length()/2; ind++){
-    s += xx[2*ind+1]*std::pow(xx[2*ind], -hatA);
-    n += xx[2*ind+1];
-  }
-  return(std::pow(s/n, -1/hatA));
-}
-
-//[[Rcpp::export]]
-// Berechnet hatsigma, wenn hatAlpha bereits berechnet wurde: xx ist ein unlisted lTable
 double hatSigmaCVec(double hatA, Rcpp::NumericVector xx){
   double s, n;
   s = 0;
@@ -349,7 +323,7 @@ double hatSigmaCVec(double hatA, Rcpp::NumericVector xx){
 
 
 
-// ABSCHNITT 3: kmax Hifsfunktionen
+// 3: kmax Auxiliary functions
 //function_kmaxC.cpp
 #include <Rcpp.h>
 using namespace Rcpp;
@@ -422,7 +396,8 @@ NumericVector slidMaxC(
   return(bms);
 }
 
-// wie slidMaxC aber ohne Looping der ersten Beobachtungen
+
+// sliding block maxima sample of a numeric vector without looping
 // [[Rcpp::export]]
 NumericVector slidMaxCNoLoop(
     NumericVector xx, int r
@@ -441,11 +416,10 @@ NumericVector kMaxTrC(
     NumericVector sample, int r, int k
 
 ){
-  // k ist hier dann schon echt zwischen 1 und m; also true kMax Fall!
+  // k is assumed to be 1 < k < m; hence, the true kmax case!
   int n; 
-  double m, mk;
+  double mk;
   n = sample.length();
-  m = std::floor(1.0*n/r); 
   mk = std::floor(1.0*n/(k*r));
   NumericVector bms (n);
   for(int ind = 0; ind < mk; ind++){
@@ -472,7 +446,62 @@ NumericVector kMaxTrC(
   return(bms);
 }
 
-// ABSCHNITT 4: Funktionen fuer die empirische Varianz
+// create numericvector sequence from 1 to n
+// [[Rcpp::export]]
+NumericVector convertSeqLenToNumericVector(int n) {
+  IntegerVector sugarVec = seq_len(n);
+  
+  NumericVector numericVec(sugarVec.begin(), sugarVec.end());
+  
+  return numericVec;
+}
+
+
+
+
+// bootstrap a list with tables (named vectors) as element
+// [[Rcpp::export]]
+List kBootstrapC(List xx) {
+  int len = xx.size();
+  NumericVector lenSeq = convertSeqLenToNumericVector(len);
+  NumericVector inds = Rcpp::sample(lenSeq, len, true);
+  List bootSamp(len);
+  for (int i = 0; i < len; ++i) {
+    bootSamp[i] = xx[inds[i] - 1];
+  }
+  return bootSamp;
+}
+
+// mean of tabled vectors
+// [[Rcpp::export]]
+double weightMeanC(IntegerVector freqs, Rcpp::NumericVector vals){
+  int len = freqs.length();
+  int n = 0;
+  double res = 0;
+  for(int ind = 0; ind < len; ind++){
+    res += vals[ind]*freqs[ind];
+    n += freqs[ind];
+  }
+  return(res/n);
+}
+
+// variance of tabled vectors
+// [[Rcpp::export]]
+double weightVarC(IntegerVector freqs, Rcpp::NumericVector vals){
+  int len = freqs.length();
+  int n = 0;
+  double mo = 0 , mt = 0;
+  for(int ind = 0; ind < len; ind++){
+    mt += std::pow(vals[ind],2)*freqs[ind];
+    mo += vals[ind]*freqs[ind];
+    n += freqs[ind];
+  }
+  return(mt/(n-1)- std::pow(mo, 2)/(n*(n-1)));
+}
+
+
+
+//  4: Auxiliary functions for the empirical variance
 // calculate empirical variance of a unlisted lTable
 // [[Rcpp::export]]
 double varCTab( Rcpp::NumericVector xx){
@@ -518,22 +547,7 @@ double varCTabVec( Rcpp::NumericVector xx){
   return(v);
 }
 
-// calculate empirical mean of a unlisted lTable
-// [[Rcpp::export]]
-double meanCTab( Rcpp::NumericVector xx){
-  double mBar, n;
-  int l = xx.length();
-  mBar = 0;
-  n = 0;
-  for(int ind = 0; ind < l/2; ind++){
-    //the even indices correspond to values of observations
-    // the uneven indices correspond to the frequency of the preceeding value
-    mBar += xx[2*ind+1] * xx[2*ind];
-    n += xx[2*ind+1];
-  }
-  mBar = mBar/n; //arithmetic mean
-  return(mBar);
-}
+
 // calculate empirical mean of a unlisted lTable with named Vectors inside
 // [[Rcpp::export]]
 double meanCTabVec( Rcpp::NumericVector xx){

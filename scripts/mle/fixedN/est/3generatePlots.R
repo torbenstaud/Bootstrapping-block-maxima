@@ -118,7 +118,7 @@ combPlot <- ggarrange(msePlot, varPlot, biasPlot, nrow = 3, common.legend = T,
           legend = "bottom", align = "v")
 combPlot
 if(FALSE){
-ggsave(combPlot, path = here("hpc/frechetMle/fixedN/est"), 
+ggsave(combPlot, path = here("results/"), 
        filename = "plotFreFixNMseVarBias.pdf", device = "pdf",
        width = 12, height = 16, 
        )

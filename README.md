@@ -2,15 +2,23 @@
 
 **NOTIZEN FÜR DICH SELBST**
 
--   fixed r: mean und Fréchet
+-   QQ und Hist plots: wie mache ich die???????
+
+-   fixed r: mean
+
+    -   präsentieren QQs nur für N = 10\^3, da sonst zu große Daten
+
+-   fixed r: Fréchet
+
+    -   bst DONE
+
+    -   est DONE
 
 -   fixed n: Fréchet
 
     -   bst DONE
 
     -   est DONE
-
-    -   Auswertung fehlt!
 
 -   Runtime Comparison: DONE
 

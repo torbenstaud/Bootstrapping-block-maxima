@@ -1,4 +1,24 @@
-#kmax Funktion: benötigt Rcpp Funktion aus "0sourceC.cpp"----
+# --------------------------------------------------------------------
+# Script Name: sourceCase.R
+# Purpose: Contains basic functions needed throughout the study
+# Author:Torben Staud
+# Date: 2024-08
+# --------------------------------------------------------------------
+
+
+
+#' Calculate circmax(k) sample of a numeric vector
+#'
+#' @param sample numeric vector 
+#' @param r integer representing the block size
+#' @param k integer representing the blocks parameter. k = 0 represents the 
+#' sliding blocks case, k = 1 the disjoint case and other values the 
+#' circmax (k) cases.
+#'
+#' @return numeric vector containing the block maxima
+#' @export
+#'
+#' @examples
 kMaxC <- function(sample, r, k){
   
   n <- length(sample)
@@ -27,8 +47,7 @@ kMaxC <- function(sample, r, k){
 }
 
 
-#Eine Table Funktion, die Matrix ausgibt----
-#einfach table Funktion in Rcpp
+#table function in Rcpp
 tableC <-
   "#include <Rcpp.h>
 using namespace Rcpp;
@@ -37,15 +56,8 @@ IntegerVector tableC(NumericVector v){
   return(table(v));
 }"
 sourceCpp(code = tableC)
-#table als Matrix
-#benötigt die oben gesourced Rcpp Funktion "tableC"
-cTableMat <- function(x){
-  tab <- tableC(x)
-  #Liste speichern
-  return(
-    matrix(data = c(as.double(names(tab)), tab), nrow = 2, byrow = T)
-  )
-}
+
+
 
 #table function erstellen, die eine Liste mit Matrizen (tables) ausgibt----
 #: Input.  1: Numeric Vector xx: n Daten, 2: integer l: Größe der Teilblöcke
@@ -54,25 +66,9 @@ cTableMat <- function(x){
 # Achtung: Der letzte Block kann eventuell weniger als l Beobachtungen beinhalten,
 #   falls l nicht n teilt.
 
-lTable <- function(x, l, n = 0){
-  if(n == 0){
-    n <- length(x)
-  }
-  mL <- ceiling(n/l)
-  resList <- vector(mode = "list", length = mL)
-  if(mL > 1){
-    for(indI in seq(1,mL - 1)){
-      resList[[indI]] <- cTableMat(x[seq((indI -1)*l+1, indI*l)])
-    }
-  }
-  resList[[mL]] <- cTableMat(x[seq((mL-1)*l+1, n)])
-  return(resList)
-}
 
-
-
-
-
+#generate list of tables (named vectors) where the tables are built from l blocks
+# of the numeric vector x (often a kMaxed vector)
 lTableVec <- function(x, l, n = 0){
   if(n == 0){
     n <- length(x)
@@ -88,8 +84,8 @@ lTableVec <- function(x, l, n = 0){
   return(resList)
 }
 
-#fehlen noch Tests:
-#mle (alpha, sigma) aus einem numerischen vektor berechnen; nicht für bootstrapping geeignet
+#calculate the Fréchet MLE of a numeric vector. returns a vector with two 
+# elements: first is the estimated shape, second the estimated scale.
 mleFre <- function(xx){
   critFun <- function(a){
     psiKC(a, xx)
@@ -99,8 +95,7 @@ mleFre <- function(xx){
 }
 
 
-#mle shape aus einem numerischen vektor berechnen; nicht für bootstrapping geeignet
-
+#same as above but without calculating the scale
 mleFreShape <- function(xx){
   critFun <- function(a){
     psiKC(a, xx)
@@ -122,34 +117,16 @@ trueShapeEstVar <- function(
   for(indN in seq(1, N)){
     ests[indN] <- 
       mleFreShape(slidMaxC(rtsC(n, m, marginal, tsMod, alpha, indN, beta), r))
-    if(indN %% 10000 == 0){
-      t1 <- Sys.time()
-      timeDiff <- difftime(t1, t0, units = "mins")
-      cat("\n \n Repetition: ", indN, " out of ", N,
-          "\n Executing time: ", timeDiff, " Minutes.", 
-          "\n Remaining: ", (N/indN-1)*timeDiff," Minutes.",
-          file = here(nameProgress), append = T)
-    }
   }
   return(var(ests))
 }
 
 
 
-#MLE aus einem ltable berechnen----
-#Input: ltable (also Liste mit tables von Unterblöcken)
-#benötigt Rcpp Funktionen "psiKCTab" und "hatSigmaC" aus Datei "CFcnts.cpp"
 
-mleFreTab <- function(xx){
-  vecX <- unlist(xx)
-  critFun <- function(a){
-    psiKCTab(a, vecX)
-  }
-  hatA <- uniroot(critFun, c(0.01, 50))$root #lower und upper aus Axels Skript übernommen
-  return(c(hatA, hatSigmaC(hatA, vecX)))
-}
-
-#selbe Funktion aber basierend auf der Vektorversion der tables
+#calculate Fréchet MLE parameters via lTables (faster for bootstrapping)
+#input: a lTable (list of tables)
+#output: parameters as a numeric vector
 mleFreTabVec <- function(xx){
   vecX <- unlist(xx)
   critFun <- function(a){
@@ -159,9 +136,9 @@ mleFreTabVec <- function(xx){
   return(c(hatA, hatSigmaCVec(hatA, vecX)))
 }
 
-#Resampling Bootstrap, der ein Replicate zurückgibt----
-#Er funktioniert mit allen Listenstrukturen; d.h.: Liste mit Einträgen, die 
-# gebootstrapped werden sollen (also zB tableVecList, tableMatrixList)
+#Resampling Bootstrap
+#Input: lTable (list of tables)
+#Output: lTable of same length
 kBootstrap <- function(xx){
   len <- length(xx)
   inds <- sample(seq(1,len), replace = T)
@@ -170,4 +147,29 @@ kBootstrap <- function(xx){
     bootSamp[[i]] <- xx[[inds[i]]]
   }
   return(bootSamp)
+}
+
+
+#Resampling Bootstrap based on a numeric vector
+#Input: numeric vector
+#Output: numeric vector
+blockBootstrap <- function(xx, l) {
+  n <- length(xx)
+  mk <- ceiling(n/l)
+  lB <- n - (mk -1)*l
+  res <- numeric(mk*l)
+  inds <- sample(seq(1,mk), replace = T)
+  counter <- 1
+  for(ind in seq_along(1:(mk))){
+    if(inds[ind] == mk){
+      res[seq(counter, counter + lB - 1)] <- 
+        xx[seq((mk-1)*l+1, n)]
+      counter <- counter + lB
+    }else{
+      res[seq(counter, counter + l -1)] <-
+        xx[seq( (inds[ind] -1)*l+1, inds[ind]*l ) ]
+      counter <- counter + l
+    }
+  }
+  return(res[seq(1,n)])
 }
