@@ -28,7 +28,10 @@ source(here("src/0source.r"))
 sourceCpp(here("src/0sourceC.cpp"))
 source(here("src/sourceCase.R"))
 source(here("src/theme.R"))
-#
+
+# ==== SECTION 3: main script ===========================================
+# Description: code for the case study data and plots
+#______________________________________________________________________________
 start_date <- as.Date("1974-01-01")
 end_date <- as.Date("2023-12-31")
 data0 <- getSymbols("^GSPC", src = "yahoo", from = start_date, 
