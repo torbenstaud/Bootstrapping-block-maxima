@@ -217,9 +217,9 @@ nCiTib <- bind_rows(tibble(
 pCiAsyTib <- 
   pSlTib %>% 
   mutate(asyQuant_Shape = qnorm(0.975, mean=0, 
-                                sd = sqrt(v11(shape)/ 40)),
+                                sd = sqrt(v11(shape, "sl")/ 40)),
          asyQuant_Scale = qnorm(0.975, mean=0, 
-                                sd = scale * sqrt(v22(shape)/ 40))
+                                sd = scale * sqrt(v22(shape, "sl")/ 40))
   ) %>% 
   pivot_longer(cols = c(shape, scale), values_to = "val", names_to = "param") %>% 
   rename(shape = "asyQuant_Shape", scale = "asyQuant_Scale") %>% 
@@ -229,15 +229,44 @@ pCiAsyTib <-
 nCiAsyTib <- 
   nSlTib %>% 
   mutate(asyQuant_Shape = qnorm(0.975, mean=0, 
-                                sd = sqrt(v11(shape)/ 40)),
+                                sd = sqrt(v11(shape, "sl")/ 40)),
          asyQuant_Scale = qnorm(0.975, mean=0, 
-                                sd = scale * sqrt(v22(shape)/ 40))
+                                sd = scale * sqrt(v22(shape, "sl")/ 40))
   ) %>% 
   pivot_longer(cols = c(shape, scale), values_to = "val", names_to = "param") %>% 
   rename(shape = "asyQuant_Shape", scale = "asyQuant_Scale") %>% 
   pivot_longer(cols = c(shape, scale), values_to = "asyQuant") %>%
   mutate(ciType = "nApprox", Upper = val + asyQuant, Lower = val - asyQuant) %>% 
   filter(param == name) %>% select(-c(name, method, asyQuant))
+##CIs based on disjoint blocks
+pCiAsyTibDb <- 
+  pDbTib %>% 
+  mutate(asyQuant_Shape = qnorm(0.975, mean=0, 
+                                sd = sqrt(v11(shape, "db")/ 40)),
+         asyQuant_Scale = qnorm(0.975, mean=0, 
+                                sd = scale * sqrt(v22(shape, "db")/ 40))
+  ) %>% 
+  pivot_longer(cols = c(shape, scale), values_to = "val", names_to = "param") %>% 
+  rename(shape = "asyQuant_Shape", scale = "asyQuant_Scale") %>% 
+  pivot_longer(cols = c(shape, scale), values_to = "asyQuant") %>%
+  mutate(ciType = "nApproxDb", Upper = val + asyQuant, Lower = val - asyQuant) %>% 
+  filter(param == name) %>% select(-c(name, method, asyQuant))
+pCiAsyTibDb$val <- pCiAsyTib$val
+
+nCiAsyTibDb <- 
+  nDbTib %>% 
+  mutate(asyQuant_Shape = qnorm(0.975, mean=0, 
+                                sd = sqrt(v11(shape, "db")/ 40)),
+         asyQuant_Scale = qnorm(0.975, mean=0, 
+                                sd = scale * sqrt(v22(shape, "db")/ 40))
+  ) %>% 
+  pivot_longer(cols = c(shape, scale), values_to = "val", names_to = "param") %>% 
+  rename(shape = "asyQuant_Shape", scale = "asyQuant_Scale") %>% 
+  pivot_longer(cols = c(shape, scale), values_to = "asyQuant") %>%
+  mutate(ciType = "nApproxDb", Upper = val + asyQuant, Lower = val - asyQuant) %>% 
+  filter(param == name) %>% select(-c(name, method, asyQuant))
+nCiAsyTibDb$val <- nCiAsyTib$val
+
 ##CIs based on normal approx with variance bootstrapped
 
 pCiAsyBstrTib <- 
@@ -268,7 +297,7 @@ nCiAsyBstrTib <-
 
 fullCiTib <- bind_rows(
   bind_rows(pCiTib, nCiTib), bind_rows(pCiAsyTib, nCiAsyTib),
-  bind_rows(pCiAsyBstrTib, nCiAsyBstrTib)
+  bind_rows(pCiAsyBstrTib, nCiAsyBstrTib), bind_rows(pCiAsyTibDb, nCiAsyTibDb)
 )
 
 
@@ -287,7 +316,9 @@ plotTib %>%
   filter(param == "shape") %>% 
   ggplot(aes(x = dateInd, val, col = ciType))+
   geom_line(col = "black")+
-  geom_line(data= plotTib, aes(x = dateInd, y = data*5), col = "darkblue")+
+  geom_line(
+    data= plotTib %>% filter(ciType != "nApproxDb"),
+    aes(x = dateInd, y = data*5), col = "darkblue")+
   geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2,
               linewidth = 0.9)+
   facet_wrap(~type)+

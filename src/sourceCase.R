@@ -45,16 +45,25 @@ asyvar <- function(alpha) {
   return(result)
 }
 
-#Asymptotic variance of shape estimation based on the sliding blocks mle
-v11 <- function(alpha) {
-  (asyvar(alpha)$var.sb)[1,1]
+#Asymptotic variance of shape estimation based on the sliding blocks/db mle
+v11 <- function(alpha, type = "sl") {
+  
+  if(type == "sl"){
+    return((asyvar(alpha)$var.sb)[1,1])
+  }else{
+    return((asyvar(alpha)$var.db)[1,1])
+  }
 }
 v11 <- Vectorize(v11)
 
-#Asymptotic variance of scale estimation based on the sliding blocks mle
+#Asymptotic variance of scale estimation based on the sliding blocks/db mle
 
-v22 <- function(alpha) {
-  (asyvar(alpha)$var.sb)[2,2]
+v22 <- function(alpha, type = "sl") {
+  if(type == "sl"){
+    return((asyvar(alpha)$var.sb)[2,2])
+  }else{
+    return((asyvar(alpha)$var.db)[2,2])
+  }
 }
 v22 <- Vectorize(v22)
 
