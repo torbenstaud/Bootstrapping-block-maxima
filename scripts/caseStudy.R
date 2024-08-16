@@ -341,7 +341,7 @@ plotTib %>%
 cBandsPlot
 
 if(F){
-ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbands.pdf"),
+ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbands2.pdf"),
        device = "pdf", width = 12, height = 5)
 }
 
