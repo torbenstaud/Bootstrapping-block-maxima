@@ -1,20 +1,8 @@
 # Bootstrapping-Estimators-based-on-the-Block-Maxima-Method
 
-**NOTIZEN FÜR DICH SELBST**
-
--   QQ und Hist plots: wie mache ich die???????
-
--   fixed r: mean
-
-    -   präsentieren QQs nur für N = 10\^3, da sonst zu große Daten
-
--   Anleitung, wie das zu nutzen ist: Auch wie das Projekt geht
-
-    -   Sourcen im HPC ansprechen und in Files schreiben, was gesourced werden muss
-
-**NOTIZEN ENDE**
-
 This repository contains the code used to generate the simulation and case studies of the paper: Bücher, Staud (2024): Bootstrapping Estimators based on the Block Maxima Method.
+
+**Attention: The scripts are mostly not standalone as a High Performance Cluster was used!**
 
 The structure is as follows:
 
