@@ -1,0 +1,1 @@
+For N = 10^4 took around 6.35 minutes; hence for N = 10^6 estimate of 635 minutes <- 12 hours walltime
