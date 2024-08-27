@@ -6,7 +6,7 @@ library(ggplot2)
 require(latex2exp)#for writing latex tau in the facets
 library(ggpubr)
 
-load(here("fullVarTibMeanEst")) #fullVarTibMeanEst
+load(here("scripts/mean/est/data/fullVarTibMeanEst")) #fullVarTibMeanEst
 fullVarTibMeanEst
 
 fullVarTibMeanEst <- fullVarTibMeanEst %>% 
@@ -14,11 +14,16 @@ fullVarTibMeanEst <- fullVarTibMeanEst %>%
          gamma %in% c(-0.2, 0, 0.2),
          beta %in% c(0, 0.5))
 #create factors for plots
-fullVarTibMeanEst$tsMod <- fullVarTibMeanEst$tsMod %>% factor(
-  levels = c(1,3), 
+fullVarTibMeanEst$beta <- fullVarTibMeanEst$beta %>% factor(
+  levels = c(0, 0.5), 
   labels = c("i.i.d.", 
              parse(text = TeX("ARMAX $0.5$")))
 )
+fullVarTibMeanEst$marginal <- factor(fullVarTibMeanEst$marginal,
+                              levels = c(1,5),
+                              labels = c("GPD", "GEV")
+)
+
 fullVarTibMeanEst$k <- fullVarTibMeanEst$k %>% factor(
   levels = c(1,2,3,0), 
   labels = c("db", "cb(2)", "cb(3)", "sb")
@@ -55,6 +60,7 @@ labsPlot <- labs(title = "Mean estimation (r = 90 fixed)",
                  col = "Estimator")
 
 
+plotAbsMse <- 
 fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
   pivot_longer(cols = c("biasEst", "varEst", "mse", "biasSq"),
                names_to = "char", values_to = "val") %>% 
@@ -62,22 +68,27 @@ fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>%
   mutate(val = val * 10^2) %>% 
   ggplot(aes(x = m, y = val, col = k, linetype = char))+
   geom_line()+
-  facet_grid(gamma~tsMod+beta, scales = "free_y", labeller=label_parsed)+
+  facet_grid(gamma~marginal+beta, scales = "free_y", labeller=label_parsed)+
   labsPlot + 
   labs(y = "MSE * 100")+
   themePlot+
-  guides(linetype = "none")
-fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
-  pivot_longer(cols = c("biasEst", "varEst", "mse", "biasSq", "ratio"),
-               names_to = "char", values_to = "val") %>% 
-  filter(char == "ratio", k != "sb") %>% 
-  ggplot(aes(x = m, y = val, col = k, linetype = char))+
-  geom_line()+
-  facet_grid(gamma~tsMod, scales = "free_y", labeller=label_parsed)+
-  labsPlot + 
-  labs(y = "MSE * 100")+
-  themePlot+
-  guides(linetype = "none")
+  guides(linetype = "none")+
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+plotAbsMse
+# fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
+#   pivot_longer(cols = c("biasEst", "varEst", "mse", "biasSq", "ratio"),
+#                names_to = "char", values_to = "val") %>% 
+#   filter(char == "ratio", k != "sb") %>% 
+#   ggplot(aes(x = m, y = val, col = k, linetype = char))+
+#   geom_line()+
+#   facet_grid(gamma~tsMod, scales = "free_y", labeller=label_parsed)+
+#   labsPlot + 
+#   labs(y = "MSE * 100")+
+#   themePlot+
+#   guides(linetype = "none")
 # now relatively
 varTibDb <- fullVarTibMeanEst %>% filter(k == "db") %>% 
   select(gamma, tsMod, marginal, beta, m, r, mse) %>% 
@@ -91,7 +102,37 @@ plotRelMse <-
   filter(tsMod != 10) %>% 
   ggplot(aes(x = m, y = ratioMSE, col = k))+
   geom_line()+
-  facet_grid(gamma~beta, labeller = label_parsed)+
+  facet_grid(gamma~marginal+beta, labeller = label_parsed)+
+  labs( y = "Relative MSE")+
+  ylim(1, 1.15)+
+  scale_y_continuous(breaks = c(1, 1.05, 1.1))+
+  labsPlot+
+  geom_hline(yintercept = 1, color = "black", linetype = "dashed")+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    strip.background.x = element_blank(), 
+    strip.text.x = element_blank()
+  )+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+plotRelMse
+plotAbsRelMse <- ggarrange(plotAbsMse, plotRelMse, align = "v", ncol = 1,
+                            common.legend = T, legend = "bottom")
+plotAbsRelMse
+
+if(FALSE){
+  ggsave(plotAbsRelMse, filename = "plotMeanAbsRelMse.pdf",
+         device = "pdf", path = here("results/"),
+         width = 10, height = 10)
+}
+
+# bias
+plotRelMse2 <- 
+  fullVarTibMeanEstRel %>% 
+  filter(tsMod != 10) %>% 
+  ggplot(aes(x = m, y = ratioMSE, col = k))+
+  geom_line()+
+  facet_grid(gamma~marginal+beta, labeller = label_parsed)+
   labs( y = "Relative MSE")+
   ylim(1, 1.15)+
   scale_y_continuous(breaks = c(1, 1.05, 1.1))+
@@ -101,8 +142,6 @@ plotRelMse <-
   theme(axis.text.x = element_blank(),
         axis.title.x = element_blank(),
         axis.ticks.x = element_blank())
-
-# bias
 plotRelBias <- 
   fullVarTibMeanEst %>% mutate(biasEst = biasEst^2/mse) %>% 
   filter(k != "db") %>% 
@@ -124,7 +163,7 @@ plotRelBias <-
   scale_y_continuous(breaks = c(0, 0.2, 0.4, 0.6))+
   guides(linetype = "none")
 
-plotRelMseBias <- ggarrange(plotRelMse, plotRelBias, align = "v", ncol = 1,
+plotRelMseBias <- ggarrange(plotRelMse2, plotRelBias, align = "v", ncol = 1,
                             common.legend = T, legend = "bottom")
 
 plotRelMseBias
