@@ -58,10 +58,10 @@ bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>%
   ggplot()+
   geom_line(aes(x = m, y = varBst*rescale, col = k))+
   geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed")+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Variance * ",rescale),
-        title = "Bootstrapping the variance of the shape estimator (n = 1,000 fixed)")+
+        title = "Bootstrapping the variance of the shape estimator")+
   themePlot+
   theme(
     axis.text.x = element_text(angle = 90)
@@ -72,12 +72,37 @@ bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>%
 bstVarPlot
 if(FALSE){
   ggsave(bstVarPlot, path = here("results/"), 
-         filename = "plotFreFixNVarEst.pdf", device = "pdf",
+         filename = "plotFreFixNVarEstSupp.pdf", device = "pdf",
          width = 10, height = 8, 
   )
 }
+#now for the main paper: no Fréchet marginals-----
 
-
+bstVarPlotMain <- 
+  bstFreVarTibPl %>% filter(marginal == "Pareto") %>% 
+  mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
+  filter(alpha != 2) %>% 
+  ggplot()+
+  geom_line(aes(x = m, y = varBst*rescale, col = k))+
+  geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed")+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("Variance * ",rescale),
+        title = "Bootstrapping the variance of the shape estimator")+
+  themePlot+
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )+
+  scale_x_continuous(
+    breaks = c(25, 50, 75)
+  )
+bstVarPlotMain
+if(FALSE){
+  ggsave(bstVarPlotMain, path = here("results/"), 
+         filename = "plotFreFixNVarEstMain.pdf", device = "pdf",
+         width = 10, height = 6, 
+  )
+}
 
 
 

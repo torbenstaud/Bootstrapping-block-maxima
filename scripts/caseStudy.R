@@ -375,29 +375,25 @@ plotTib <- fullCiTib %>%
 
 ###Plotting
 #textsize = 15 from theme.R
+plotTib$ciType <- factor(plotTib$ciType, levels = c("bstrDb", "bstr"))
 cBandsPlot <- 
 plotTib %>% 
   filter(param == "shape", type == "losses") %>% 
-  ggplot(aes(x = dateInd, val, col = ciType))+
+  ggplot(aes(x = dateInd, val))+
   geom_line(
     data= plotTib %>% filter(ciType != "nApproxDb"),
     aes(x = dateInd, y = data*5), col = "darkblue")+
-  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2,
-              linewidth = 0.9)+
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.4,
+              linewidth = 0.1, col = "red")+
   geom_line(data = plotTib %>% 
-              filter(param == "shape", ciType == "bstr", type == "losses"), 
+              filter(param == "shape", type == "losses"), 
             aes(x = dateInd, val),
             col = "black")+
-  #facet_wrap(~type)+
+  facet_wrap(vars(ciType))+
   scale_x_continuous(breaks = c(1,49,97,145), 
                      labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
-  #facet_wrap(~type, 
-  #           labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
-  scale_color_discrete(name = "Type", 
-                       labels = 
-                         c(bstr = "cb", bstrDb = "db",
-                           bstrApprox = "NBCI", nApprox = "NCI")
-  )+
+  facet_wrap(vars(ciType), 
+             labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
   themePlot+
   theme(
     axis.title.x = element_blank()
@@ -410,7 +406,7 @@ cBandsPlot
 
 if(F){
 ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
-       device = "pdf", width = 7, height = 5)
+       device = "pdf", width = 10, height = 5)
 }
 
 
