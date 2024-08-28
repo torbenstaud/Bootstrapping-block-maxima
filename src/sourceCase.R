@@ -72,23 +72,35 @@ v22 <- Vectorize(v22)
 # based on circmax block maxima.
 ###################################################
 ### Circmax conficence intervals:
-### Input: xx: sliding block maxima sample, r: block size; k: k block parameter;
+### Input: xx: sliding- or db block maxima sample, r: block size; k: k block parameter;
 ###   niv: asymptotic niveau for confidence interval; B: bootstrap replicate
 ### Output: list with two entries, 
 ###   quants = Matrix with lower and upper bounds for shape and scale parameters
 ###   variance = vector with variances for shape and scale bootstrap estimation
 ###################################################
-ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3){
-  xxL <- lTableVec(xx, l = r*k)
+ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3, mthd = "cb"){
   bstSamp <- matrix(nrow = B, ncol = 2) #col1: shape, col2: scale
-  for(indB in seq(1,B)){
-    set.seed(indB)
-    bstSamp[indB,] <- 
-      tryCatch(mleFreTabVec(kBootstrap(xxL)), error = function(cond){
-        cat("\n \n Erorr at indB = ", indB, "\n exact Error: ")
-        message(conditionMessage(cond))
-        return(c(NA,NA))}
-      )
+  if(mthd == "cb"){
+    xxL <- lTableVec(xx, l = r*k)
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      bstSamp[indB,] <- 
+        tryCatch(mleFreTabVec(kBootstrap(xxL)), error = function(cond){
+          cat("\n \n Erorr at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA,NA))}
+        )
+    }
+  }else if(mthd == "db"){
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      bstSamp[indB,] <-
+        tryCatch(mleFre(dbBootstrap(xx)), error = function(cond){
+          cat("\n \n Erorr at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA,NA))
+        })
+    }
   }
   bstSamp <- na.omit(bstSamp)
   quants <-
@@ -109,3 +121,4 @@ ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3){
                variance = 
                  apply(bstSamp, c(2), var)))
 }
+

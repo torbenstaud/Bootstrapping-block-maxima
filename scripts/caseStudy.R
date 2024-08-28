@@ -91,29 +91,44 @@ nCiUpper <- matrix(nrow=l.q - 40, ncol=2)
 nCiLower <- matrix(nrow=l.q - 40, ncol=2)
 pVars <- matrix(nrow = l.q - 40, ncol = 2)
 nVars <- matrix(nrow = l.q - 40, ncol = 2)
+pDbCiUpper <- matrix(nrow=l.q - 40, ncol=2)
+pDbCiLower <- matrix(nrow=l.q - 40, ncol=2)
+nDbCiUpper <- matrix(nrow=l.q - 40, ncol=2)
+nDbCiLower <- matrix(nrow=l.q - 40, ncol=2)
+pDbVars <- matrix(nrow = l.q - 40, ncol = 2)
+nDbVars <- matrix(nrow = l.q - 40, ncol = 2)
 
 # length of quarter: (62 rougly corresponds to one trading quarter)
 r <- 62 
 # Estimation loop (rolling window over the quarters)
 if(F){
-  
+  t0 <- Sys.time()
 for(i in 1:(l.q - 40)) {
   ind <- which( date_quarters2 %in% (i:(i+39)) )
   pdata <- plogrets[ind]; 
   ndata <- nlogrets[ind]
   # Disjoint Blocks:
-  ##To do für mich:
-  # CIs für disjoint blocks erstellen
-  ##
   pml.db[i,] <- mleFre(plogrets_dbm[i:(i+39)])
-  nml.db[i,] <- mleFre(nlogrets_dbm[i:(i+39)])  
+  nml.db[i,] <- mleFre(nlogrets_dbm[i:(i+39)])
+  pDbQuantsAndVars <- plogrets_dbm[i:(i+39)] %>% 
+    ciCircmax(r,2, B = 2*10^3, mthd = "db")
+  nDbQuantsAndVars <- nlogrets_dbm[i:(i+39)] %>% 
+    ciCircmax(r,2, B = 2*10^3, mthd = "db")
+  pDbCiBst <- pDbQuantsAndVars[[1]]
+  nDbCiBst <- nDbQuantsAndVars[[1]] 
+  pDbVars[i,] <- pDbQuantsAndVars[[2]]
+  nDbVars[i,] <- nDbQuantsAndVars[[2]]
+  pDbCiUpper[i,] <- pDbCiBst[,2] #scale cis win
+  pDbCiLower[i,] <- pDbCiBst[,1] #shape cis win
+  nDbCiUpper[i,] <- nDbCiBst[,2] #scale cis loss
+  nDbCiLower[i,] <- nDbCiBst[,1] #shape cis loss
   # Sliding Blocks:
   pml.sb[i,] <- mleFre(slidMaxCNoLoop(pdata,r))
   nml.sb[i,] <- mleFre(slidMaxCNoLoop(ndata,r))
   pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)
   nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)
   pCiBst <- pQuantsAndVars[[1]]
-  nCiBst <- nQuantsAndVars[[1]] 
+  nCiBst <- nQuantsAndVars[[1]]
   pVars[i,] <- pQuantsAndVars[[2]]
   nVars[i,] <- nQuantsAndVars[[2]]
   pCiUpper[i,] <- pCiBst[,2] #scale cis win
@@ -121,9 +136,12 @@ for(i in 1:(l.q - 40)) {
   nCiUpper[i,] <- nCiBst[,2] #scale cis loss
   nCiLower[i,] <- nCiBst[,1] #shape cis loss
 }
+  print(difftime(Sys.time(), t0, units = "min")) #db takes approx 0.6 mins; sl 1.5mins
   save(
-    pml.db, nml.db, pml.sb, nml.sb, pCiUpper, pCiLower, nCiUpper, nCiLower, 
-    pVars, nVars, 
+    pml.db, nml.db, pml.sb, nml.sb, 
+    pCiUpper, pCiLower, nCiUpper, nCiLower, pVars, nVars, 
+    pDbCiUpper, pDbCiLower, nDbCiUpper, nDbCiLower, pDbVars, nDbVars,
+    
     file = here("data/caseStudyData.R")
   )
 }
@@ -165,8 +183,53 @@ pSlTib <- tibble(
   shape = pml.sb[,1],
   scale = pml.sb[,2]
 )
-#we discard db from now on
-#create bootstrap confidence interval tibbles
+#create bootstrap confidence interval tibbles for disjoint blocks
+pDbCiTib <- bind_rows(tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "scale",
+  ciType = "bstrDb",
+  Upper = pDbCiUpper[,2],
+  Lower = pDbCiUpper[,1]
+), tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "shape",
+  ciType = "bstrDb",
+  Upper = pDbCiLower[,2],
+  Lower = pDbCiLower[,1]
+))  %>% left_join(
+  pDbTib %>% pivot_longer(cols = c(shape, scale), names_to = "param",
+                          values_to = "val")) %>% 
+  select(-method)
+
+nDbCiTib <- bind_rows(tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "scale",
+  ciType = "bstrDb",
+  Upper = nDbCiUpper[,2],
+  Lower = nDbCiUpper[,1]
+), tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "shape",
+  ciType = "bstrDb",
+  Upper = nDbCiLower[,2],
+  Lower = nDbCiLower[,1]
+))  %>% left_join(
+  nDbTib %>% pivot_longer(cols = c(shape, scale), names_to = "param",
+                          values_to = "val")) %>% 
+  select(-method)
+#create bootstrap confidence interval tibbles for sliding blocks
 pCiTib <- bind_rows(tibble(
   data = nlogrets_dbm[41:200],
   dateInd = seq_along(date_final[qc[41:200]]),
@@ -295,10 +358,12 @@ nCiAsyBstrTib <-
 
 
 fullCiTib <- bind_rows(
+  bind_rows(pDbCiTib, nDbCiTib),
   bind_rows(pCiTib, nCiTib), bind_rows(pCiAsyTib, nCiAsyTib),
   bind_rows(pCiAsyBstrTib, nCiAsyBstrTib), bind_rows(pCiAsyTibDb, nCiAsyTibDb)
 )
-
+fullCiTib <- fullCiTib %>% 
+  filter(ciType %in% c("bstrDb", "bstr"))
 
 rescale <- 100
 
@@ -312,22 +377,26 @@ plotTib <- fullCiTib %>%
 #textsize = 15 from theme.R
 cBandsPlot <- 
 plotTib %>% 
-  filter(param == "shape") %>% 
+  filter(param == "shape", type == "losses") %>% 
   ggplot(aes(x = dateInd, val, col = ciType))+
-  geom_line(col = "black")+
   geom_line(
     data= plotTib %>% filter(ciType != "nApproxDb"),
     aes(x = dateInd, y = data*5), col = "darkblue")+
   geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2,
               linewidth = 0.9)+
-  facet_wrap(~type)+
+  geom_line(data = plotTib %>% 
+              filter(param == "shape", ciType == "bstr", type == "losses"), 
+            aes(x = dateInd, val),
+            col = "black")+
+  #facet_wrap(~type)+
   scale_x_continuous(breaks = c(1,49,97,145), 
                      labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
-  facet_wrap(~type, 
-             labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
+  #facet_wrap(~type, 
+  #           labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
   scale_color_discrete(name = "Type", 
                        labels = 
-                         c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
+                         c(bstr = "cb", bstrDb = "db",
+                           bstrApprox = "NBCI", nApprox = "NCI")
   )+
   themePlot+
   theme(
@@ -340,15 +409,18 @@ plotTib %>%
 cBandsPlot
 
 if(F){
-ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbands2.pdf"),
-       device = "pdf", width = 12, height = 5)
+ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+       device = "pdf", width = 7, height = 5)
 }
 
 
 ##Plot of the widths
+plotTibWidth <- 
 plotTib %>% 
   filter(param == "shape") %>% 
-  mutate(width = Upper - Lower) %>% 
+  mutate(width = Upper - Lower)
+
+plotTibWidth %>% 
   ggplot(aes(x = dateInd, width, col = ciType))+
   geom_line()+
   facet_wrap(~type, 
@@ -359,7 +431,25 @@ plotTib %>%
                        labels = 
                          c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
   )
-
+##Plot of the relative widths
+plotTibRel <- left_join(
+  plotTibWidth %>% filter(ciType == "bstr") %>% 
+    select(dateInd, date, type, param, width),
+  plotTibWidth %>% filter(ciType=="bstrDb") %>% rename(dbWidth = "width") %>% 
+    select(dateInd, date, type, param, dbWidth)
+) %>% mutate(relWidth = dbWidth/width) 
+plotTibRel %>% 
+  ggplot(aes(x = dateInd, relWidth))+
+  geom_line()+
+  geom_hline(yintercept = 1, linetype = "dashed", col = "red")+
+  facet_wrap(~type, 
+             labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  scale_color_discrete(name = "Type", 
+                       labels = 
+                         c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
+  )
 ##average widths
 plotTib %>% group_by(ciType, type) %>% 
   filter(param == "shape") %>% 
