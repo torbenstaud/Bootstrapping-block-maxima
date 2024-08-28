@@ -173,3 +173,18 @@ blockBootstrap <- function(xx, l) {
   }
   return(res[seq(1,n)])
 }
+
+#following is a helper function (not visible)
+#Resampling Bootstrap for disjoint bm based on a numeric vector
+#Input: numeric vector
+#Output: numeric vector
+dbBootstrap <- function(xx) {
+  n <- length(xx)
+  res <- numeric(n)
+  inds <- sample(seq(1,n), replace = T)
+  counter <- 1
+  for(ind in seq_along(1:n)){
+    res[ind] <- xx[inds[ind]]
+  }
+  return(res)
+}

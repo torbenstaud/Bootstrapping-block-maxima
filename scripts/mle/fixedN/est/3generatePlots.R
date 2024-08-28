@@ -35,7 +35,7 @@ varTibMleEstPl$beta <- factor(varTibMleEstPl$beta,
 )
 
 varTibMleEstPl$alpha <- factor(varTibMleEstPl$alpha, 
-                                levels = c(0.5, 1, 2), 
+                                levels = c(0.5, 1, 1.5), 
                                 labels = c(parse(text = TeX("$\\alpha_0 = 0.5$")),
                                            parse(text = TeX("$\\alpha_0 = 1$")),
                                            parse(text = TeX("$\\alpha_0 = 1.5$")))
@@ -65,13 +65,14 @@ labsPlot <- labs(
                  x = "Effective sample size m",
                  col = "Estimator")
 rescale <- 100
+#plot for the supplement: containing also Fréchet marginals and bias+var
 varTibMleEstPl <- 
   varTibMleEstPl %>% mutate(mse = mse * rescale, biasEst = biasEst^2*rescale,
                           varEst = varEst * rescale)
 msePlot <- 
 varTibMleEstPl %>% ggplot(aes(x = m, y = mse, col = k))+
   geom_line()+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("MSE * ", rescale),
         title = "MSE of shape estimators")+
@@ -86,7 +87,7 @@ varTibMleEstPl %>% ggplot(aes(x = m, y = mse, col = k))+
 varPlot <- 
   varTibMleEstPl %>% ggplot(aes(x = m, y = varEst, col = k))+
   geom_line()+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Variance * ", rescale),
         title = "Variance of shape estimators")+
@@ -103,7 +104,7 @@ varPlot <-
 biasPlot <- 
   varTibMleEstPl %>% ggplot(aes(x = m, y = biasEst, col = k))+
   geom_line()+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Bias^2 * ", rescale),
         title = "Bias of shape estimators")+
@@ -119,7 +120,49 @@ combPlot <- ggarrange(msePlot, varPlot, biasPlot, nrow = 3, common.legend = T,
 combPlot
 if(FALSE){
 ggsave(combPlot, path = here("results/"), 
-       filename = "plotFreFixNMseVarBias.pdf", device = "pdf",
+       filename = "plotFreFixNMseVarBiasSupp.pdf", device = "pdf",
        width = 12, height = 16, 
        )
+}
+
+#now plot for the paper
+textSize <- 15
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+
+msePlotMain <- 
+  varTibMleEstPl %>% filter(marginal == "Pareto") %>% 
+  ggplot(aes(x = m, y = mse, col = k))+
+  geom_line()+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("MSE * ", rescale),
+        title = "MSE of shape estimators")+
+  themePlot+
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )+
+  scale_x_continuous(breaks = c(25,50,75),
+                     limits = c(25,83)
+                     )
+
+msePlotMain
+if(FALSE){
+  ggsave(msePlotMain, path = here("results/"), 
+         filename = "plotFreFixNMseMain.pdf", device = "pdf",
+         width = 10, height = 8, 
+  )
 }

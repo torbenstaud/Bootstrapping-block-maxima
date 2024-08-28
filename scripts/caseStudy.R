@@ -92,7 +92,7 @@ nCiLower <- matrix(nrow=l.q - 40, ncol=2)
 pVars <- matrix(nrow = l.q - 40, ncol = 2)
 nVars <- matrix(nrow = l.q - 40, ncol = 2)
 
-# length of quarter: (62 rougly corresonds to one trading quarter)
+# length of quarter: (62 rougly corresponds to one trading quarter)
 r <- 62 
 # Estimation loop (rolling window over the quarters)
 if(F){
@@ -103,8 +103,7 @@ for(i in 1:(l.q - 40)) {
   ndata <- nlogrets[ind]
   # Disjoint Blocks:
   ##To do für mich:
-  # -Eigene Mle und slidmax funktionen drauf anwenden
-  # -bei slidmax loopen verhindern, -bei mle drauf achten, dass alles passt
+  # CIs für disjoint blocks erstellen
   ##
   pml.db[i,] <- mleFre(plogrets_dbm[i:(i+39)])
   nml.db[i,] <- mleFre(nlogrets_dbm[i:(i+39)])  
@@ -377,3 +376,4 @@ plotTib %>% group_by(ciType, type) %>%
                      c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
     )
 
+#for the main paper we only consider db and cb (based on sl) bands
