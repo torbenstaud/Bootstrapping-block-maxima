@@ -20,6 +20,12 @@ varTibMleEstPl$k <- factor(varTibMleEstPl$k, levels = c(1,2,3,0),
                                        parse(text = TeX("sb"))
                             )
 )
+ownPalette <- #based on dark2
+  c("cb(2)" = "#F8766D",  
+    "cb(3)" = "#7CAE00",  
+    "db" = "#00BFC4",  
+    "sb" = "#C77CFF")
+  
 varTibMleEstPl$marginal <- factor(varTibMleEstPl$marginal,
                                   levels = c(3,4),
                                   labels = c("Fréchet", "Pareto")
@@ -63,7 +69,7 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
 
 labsPlot <- labs(
                  x = "Effective sample size m",
-                 col = "Estimator")
+                 col = "Estimator:")
 rescale <- 100
 #plot for the supplement: containing also Fréchet marginals and bias+var
 varTibMleEstPl <- 
@@ -71,7 +77,7 @@ varTibMleEstPl <-
                           varEst = varEst * rescale)
 msePlot <- 
 varTibMleEstPl %>% ggplot(aes(x = m, y = mse, col = k))+
-  geom_line()+
+  geom_line(linewidth = 1.1)+
   facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("MSE * ", rescale),
@@ -82,11 +88,12 @@ varTibMleEstPl %>% ggplot(aes(x = m, y = mse, col = k))+
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
     legend.position = "none"
-    )
+    )+
+  scale_color_manual(values = ownPalette)
 
 varPlot <- 
   varTibMleEstPl %>% ggplot(aes(x = m, y = varEst, col = k))+
-  geom_line()+
+  geom_line(linewidth = 1.1)+
   facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Variance * ", rescale),
@@ -99,11 +106,12 @@ varPlot <-
     legend.position = "none",
     strip.background.x = element_blank(),
     strip.text.x = element_blank()
-  )
+  )+
+  scale_color_manual(values = ownPalette)
 
 biasPlot <- 
   varTibMleEstPl %>% ggplot(aes(x = m, y = biasEst, col = k))+
-  geom_line()+
+  geom_line(linewidth = 1.1)+
   facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Bias^2 * ", rescale),
@@ -116,17 +124,17 @@ biasPlot <-
     axis.text.x = element_text(angle = 90)
   )
 combPlot <- ggarrange(msePlot, varPlot, biasPlot, nrow = 3, common.legend = T,
-          legend = "bottom", align = "v")
+          legend = "right", align = "v")
 combPlot
 if(FALSE){
 ggsave(combPlot, path = here("results/"), 
        filename = "plotFreFixNMseVarBiasSupp.pdf", device = "pdf",
-       width = 12, height = 16, 
+       width = 12, height = 20, 
        )
 }
 
 #now plot for the paper
-textSize <- 15
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -145,24 +153,27 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
 
 msePlotMain <- 
   varTibMleEstPl %>% filter(marginal == "Pareto") %>% 
-  ggplot(aes(x = m, y = mse, col = k))+
-  geom_line()+
-  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  ggplot(aes(x = m, y = mse*rescale, col = k))+
+  geom_line(linewidth = 1.1)+
+  facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("MSE * ", rescale),
         title = "MSE of shape estimators")+
   themePlot+
   theme(
-    axis.text.x = element_text(angle = 90)
+    axis.text.x = element_text(angle = 90),
+    legend.position = "right",
+    plot.title = element_blank()
   )+
   scale_x_continuous(breaks = c(25,50,75),
                      limits = c(25,83)
-                     )
+                     )+
+  scale_color_manual(values = ownPalette)
 
 msePlotMain
 if(FALSE){
   ggsave(msePlotMain, path = here("results/"), 
          filename = "plotFreFixNMseMain.pdf", device = "pdf",
-         width = 10, height = 8, 
+         width = 10, height = 11, 
   )
 }

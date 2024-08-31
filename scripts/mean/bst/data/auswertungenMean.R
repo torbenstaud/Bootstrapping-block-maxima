@@ -11,22 +11,39 @@ library(ggpubr)
 
 ## load data: name is "estArrayMean"----
 #load("Z:/bootstrap/mean/data/r90/meanEst_gamma-0.2_Ts1_Distr1R.data")
-load(here("scripts/mean/data/meanEst_gamma-0.2_Ts1_Distr1R.data")) 
-source(here("scripts/mean/0parameters.R"))
+#Parameters: gamma = -0.2, marginal = gpd, tsmod = armax, beta = 0.5, r = 90, m = 80
 
-N <- 10^3
+load(here("scripts/mean/bst/data/MeanBst_R90gamma-0.2_Ts3_Distr1_beta0.5_M80.Rdata")) #meanArray
+load(here("scripts/mean/bst/data/MleEst_R90gamma-0.2_Ts3_Distr1_beta0.5.Rdata"))  #estarray
+sourceCpp(here("src/0sourceC.cpp"))
+
+source(here("scripts/mean/bst/0parametersBstRFix.R"))
+
+#N = 5*10^3
+#kVec = c(0, 1,2,3)
+#B = 10^3
+#mVec = seq(40,100, by = 10)
+
 #QQ-Plots and Histogramms----
 #dims = N x mVec x kVec x B
 
-gammaInd <- 1 #we want gamma = -0.2
-gamma <- gammaVec[gammaInd]
+estsArray <- meanArray[,5,] #5 is the index for m = 80
+bstArray <- estArray
+# parameters: 90 (blocksize), 1(gpd), 3(tsmod), -0.2(gamma), 10^6(repetitions),
+# 0.5(beta)
+#truthMean <- getTruthC(90, 1,3,-0.2,10^6,0.5)
+estsErrArray <- estsArray - truthMean
+##create bootstrap error array
+tmpJoinArray <- array(dim = c(N, length(kVec), B+1))
+tmpJoinArray[,,1] <- estsArray
+tmpJoinArray[,,seq(2,B+1)] <- bstArray
 errorFun <- function(xx){
   xx[-1] - xx[1]
 }
-truthMean <- getTruthC(90, 1,1,-0.2,10^6,0.5)
-#explore
-scaleFactor <- 2
-textSize <- 12
+bstsErrArray <- tmpJoinArray %>% apply(c(1,2), errorFun)
+
+##plotting cosmetics
+textSize <- 15
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey"),
@@ -43,17 +60,17 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
                    legend.position = "right",
                    legend.title = element_text(size = scaleFactor*textSize),
                    legend.text = element_text(size = scaleFactor*textSize))
-
-createQQMean <- function(kEst, kBst, mInd = 4, noY = F){
+##function for qq-plot
+createQQMean <- function(kEst, kBst, noY = F){
   #kEst and kBst in index form: 1 = sliding, 2 = disjoint, 3 = 2-max, 4 = 3-max 
-  estErrors <- 10*quantile(estArrayMean[, mInd, kEst,1] - truthMean, 
-                        seq(0.001,0.999, length.out = N))
-  bstErrors <- 10*quantile(c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun)), 
-                        seq(0.001,0.999, length.out = N))
+  estErrors <- 10*quantile(estsErrArray[, kEst], 
+                           seq(0.001,0.999, length.out = N))
+  bstErrors <- 10*quantile(c(bstsErrArray[,,kBst]), 
+                           seq(0.001,0.999, length.out = N))
   ggplot(mapping = aes(x = estErrors, y = bstErrors))+
     geom_point()+
     xlim(-1.5, 1.5)+
-    ylim(-1.5, 1.5)+
+    scale_y_continuous(limits = c(-1.5, 1.5), breaks = c(0, 1))+
     geom_abline(col = "red")+
     labs(
       y = "Quantiles * 10", 
@@ -61,41 +78,39 @@ createQQMean <- function(kEst, kBst, mInd = 4, noY = F){
     )+
     themePlot+
     theme(plot.title = element_blank(),
-          axis.title.y = element_text(size = scaleFactor*textSize), 
           axis.title.x = element_blank(),
           axis.text.x = element_blank(), 
           axis.ticks.x = element_blank()
-          )+
+    )+
     if(noY == T){
       theme(axis.text.y = element_blank(),
             axis.ticks.y = element_blank(), 
             axis.title.y = element_blank())
     }
 }
-createHistMean <- function(kEst, kBst, mInd = 4, noY = F){
+createHistMean <- function(kEst, kBst, noY = F){
   kNames <- 
     c("sb", "db", "cb(2)", "cb(3)")
-  estErrors <- estArrayMean[, mInd, kEst,1] - truthMean
-  bstErrors <- c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun))
   histTib <- tibble(type = rep(
     c(paste0("Estimation Error"), 
       paste0("Bootstrap Error")),
-                               c(N, N*B)),
-                    val = c(estErrors, bstErrors))
+    c(N, N*B)),
+    val = c(estsErrArray[,kEst], c(bstsErrArray[,,kBst])))
   histTib %>% ggplot(aes(x = val))+
     geom_histogram(aes(x = val, fill = type, y = after_stat(density)), alpha = 0.3, 
                    position = "identity")+
     geom_density(aes(x = val, linetype = type))+
     xlim(-0.2,0.2)+
-    ylim(0, 11)+
+    scale_y_continuous(limits = c(0,11), breaks = c(0, 3.0, 6.0, 9.0))+
     labs(
       x = paste0(kNames[kEst], " vs ", kNames[kBst]),
       y = "Density",
-      fill = "Error Type", linetype = "Error Type"
+      fill = "Error Type:", linetype = "Error Type:"
     )+
     scale_linetype_manual(values = c("solid", "dashed"))+
-    theme(plot.title = element_blank()
-          )+
+    theme(plot.title = element_blank(),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+    )+
     themePlot+
     if(noY){
       theme(axis.title.y = element_blank(), 
@@ -105,32 +120,119 @@ createHistMean <- function(kEst, kBst, mInd = 4, noY = F){
 }
 
 
+
+# ####OLD
+# errorFun <- function(xx){
+#   xx[-1] - xx[1]
+# }
+# #explore
+# scaleFactor <- 2
+# textSize <- 12
+# themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
+#                    strip.background = element_rect(color = "black", 
+#                                                    fill = "lightgrey"),
+#                    axis.title.x = element_text(size = scaleFactor*textSize, 
+#                                                face = "plain"),
+#                    axis.title.y = element_text(size = scaleFactor*textSize, 
+#                                                face = "plain"),
+#                    axis.text.y =element_text(size = scaleFactor*textSize), 
+#                    axis.text.x =element_text(size = scaleFactor*textSize),
+#                    strip.text.x = element_text(size = scaleFactor*textSize),
+#                    strip.text.y = element_text(size = scaleFactor*textSize),
+#                    plot.title = element_text(hjust = 0.5, size = scaleFactor*textSize), 
+#                    #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+#                    legend.position = "right",
+#                    legend.title = element_text(size = scaleFactor*textSize),
+#                    legend.text = element_text(size = scaleFactor*textSize))
+# 
+# #createQQMean <- function(kEst, kBst, mInd = 4, noY = F){
+#   #kEst and kBst in index form: 1 = sliding, 2 = disjoint, 3 = 2-max, 4 = 3-max 
+#   estErrors <- 10*quantile(estArrayMean[, mInd, kEst,1] - truthMean, 
+#                         seq(0.001,0.999, length.out = N))
+#   bstErrors <- 10*quantile(c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun)), 
+#                         seq(0.001,0.999, length.out = N))
+#   ggplot(mapping = aes(x = estErrors, y = bstErrors))+
+#     geom_point()+
+#     xlim(-1.5, 1.5)+
+#     ylim(-1.5, 1.5)+
+#     geom_abline(col = "red")+
+#     labs(
+#       y = "Quantiles * 10", 
+#       title = "QQ-Plot of the estimation error vs bootstrap error for the mean"
+#     )+
+#     themePlot+
+#     theme(plot.title = element_blank(),
+#           axis.title.y = element_text(size = scaleFactor*textSize), 
+#           axis.title.x = element_blank(),
+#           axis.text.x = element_blank(), 
+#           axis.ticks.x = element_blank()
+#           )+
+#     if(noY == T){
+#       theme(axis.text.y = element_blank(),
+#             axis.ticks.y = element_blank(), 
+#             axis.title.y = element_blank())
+#     }
+# }
+# #createHistMean <- function(kEst, kBst, mInd = 4, noY = F){
+#   kNames <- 
+#     c("sb", "db", "cb(2)", "cb(3)")
+#   estErrors <- estArrayMean[, mInd, kEst,1] - truthMean
+#   bstErrors <- c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun))
+#   histTib <- tibble(type = rep(
+#     c(paste0("Estimation Error"), 
+#       paste0("Bootstrap Error")),
+#                                c(N, N*B)),
+#                     val = c(estErrors, bstErrors))
+#   histTib %>% ggplot(aes(x = val))+
+#     geom_histogram(aes(x = val, fill = type, y = after_stat(density)), alpha = 0.3, 
+#                    position = "identity")+
+#     geom_density(aes(x = val, linetype = type))+
+#     xlim(-0.2,0.2)+
+#     ylim(0, 11)+
+#     labs(
+#       x = paste0(kNames[kEst], " vs ", kNames[kBst]),
+#       y = "Density",
+#       fill = "Error Type:", linetype = "Error Type:"
+#     )+
+#     scale_linetype_manual(values = c("solid", "dashed"))+
+#     theme(plot.title = element_blank()
+#           )+
+#     themePlot+
+#     if(noY){
+#       theme(axis.title.y = element_blank(), 
+#             axis.text.y = element_blank(), 
+#             axis.ticks.y = element_blank())
+#     }
+# }
+
+
 #create histogram plots
 pH1 <- createHistMean(1,1)
-pH2 <- createHistMean(1,4, noY = T)
-pH3 <- createHistMean(4,4, noY = T)
+pH2 <- createHistMean(1,3, noY = T)
+pH3 <- createHistMean(1,4, noY = T)
 pH4 <- createHistMean(2,2, noY = T)
 
 #create qq plots
 pQ1 <- createQQMean(1,1)
-pQ2 <- createQQMean(1,4, noY = T)
-pQ3 <- createQQMean(4,4, noY = T)
+pQ2 <- createQQMean(1,3, noY = T)
+pQ3 <- createQQMean(1,4, noY = T)
 pQ4 <- createQQMean(2,2, noY = T)
 #combine both qq and histogram plots
 histQQPlots <- ggarrange(pQ1, pQ2, pQ3, pQ4, pH1,pH2,pH3,pH4, 
                        ncol = 4, nrow = 2, common.legend = T, 
-                       legend = "bottom", widths = c(1,1), heights = c(1,1.2))
-pubhistQQPlots <- annotate_figure(histQQPlots, 
-                top = text_grob("Mean estimation (r = 90 fixed)", 
-                                size = textSize*scaleFactor, face = "bold"))
+                       legend = "right", widths = c(1.3,1,1,1,1,1,1,1), 
+                       heights = c(1,1.2))
+#pubhistQQPlots <- annotate_figure(histQQPlots, 
+#                top = text_grob("Mean estimation error", 
+#                                size = textSize, face = "bold"))
 
-pubhistQQPlots
-
+#pubhistQQPlots
+histQQPlots
 if(F){
   
-ggsave(pubhistQQPlots, filename = "plotHistQQMean.pdf",
+ggsave(histQQPlots, filename = "plotHistQQMean.pdf",
        device = "pdf", path = here("results/"),
-       scale = scaleFactor-0.3)
+       width = 16, height = 10)
 }
 
 #vergleiche schätzer----

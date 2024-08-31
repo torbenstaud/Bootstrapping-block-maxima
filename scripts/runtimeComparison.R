@@ -40,7 +40,7 @@ source(here("src/theme.R")) #plot theme
 #_______________________________________________________________________________
 
 #load the processed data file; name: fullBenchTibR
-load(here("hpc/frechetMle/runtimeComp/benchTibMleRFix"))
+load(here("data/benchTibMleRFix"))
 
 
 labsPlot <- labs(
@@ -52,33 +52,59 @@ tmpDbTibMle <- fullBenchTibR %>% filter(expr == "disjoint") %>% rename(timeDB = 
 benchTibRelMle <- left_join(fullBenchTibR, tmpDbTibMle) %>% filter(expr !="disjoint") %>% 
   mutate(relTime = timeMed/timeDB)
 benchTibRelMle$expr <- benchTibRelMle$expr %>% factor(
-  levels = c("disjoint", "k2", "k3", "sliding", "k2No", "k3No"), 
-  labels = c("db", "cb(2)", "cb(3)", "sb", "k2No", "k3No")
+  levels = c("sliding", "k2", "k3",  "k2No", "k3No","disjoint"), 
+  labels = c("sb", "cb(2)", "cb(3)", "k2No", "k3No", "db")
 )
+ownPalette <- #based on dark2
+  c("cb(2)" = "#F8766D",  
+    "cb(3)" = "#7CAE00",  
+    "db" = "#00BFC4",  
+    "sb" = "#C77CFF")
+
 benchTibRelMle$B <- benchTibRelMle$B %>% factor(
   levels = c(250, 500, 750, 1000), 
   labels = c("B = 250", "B = 500", "B = 750", "B = 1000")
 )
+textSize <- 17
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
 ###plotting----
 relTimePlot <-
 benchTibRelMle  %>% 
   filter(!expr %in% c("k2No", "k3No"), m >= 40) %>% 
-  ggplot(aes(x = m, y = relTime, col = expr))+ geom_line()+
-  geom_hline(yintercept = 1, col = "black", linetype = "dashed")+
+  ggplot(aes(x = m, y = relTime, col = expr))+ 
+  geom_line(linewidth = 1.1)+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "longdash")+
   facet_wrap(~B, ncol = 4)+
   labs(x = "Effective sample size",
        title = "Relative runtimes for Fréchet MLE", 
        y = "Relative time")+
   labsPlot+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme( 
-    axis.text.x = element_text(angle = 90, hjust = 1)
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    legend.position = "right",
+    plot.title = element_blank()
   )
 relTimePlot
 if(F){
 ggsave(relTimePlot, path = here("results/"), 
        filename = "plotrelTimePlotMleRFix.pdf", device = "pdf",
-       width = 9, height = 3, 
+       width = 9, height = 6, 
 )
 }
 

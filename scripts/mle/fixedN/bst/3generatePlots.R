@@ -11,19 +11,34 @@ source(here("src/theme.R"))
 
 bstFreVarTibPl <- bstFreVarTib %>% 
   left_join(trueVarsTib) %>% 
-  filter( beta %in% c(0, 0.5), k != 1)
+  filter( beta %in% c(0, 0.5), k != 1) %>% 
+  bind_cols(tibble(char = "sb"))
 
 
-
+## for disjoint blocks----
+load(here("scripts/mle/fixedN/bst/generateTrueVars/data/trueVarsTibDb"))#db true vars
+bstFreVarTibPlDb <- bstFreVarTib %>% filter(k == 1) %>% 
+  left_join(trueVarsTib, by = c("alpha", "tsModel", "marginal", "m", 
+                                "r", "beta")) %>% 
+  filter(
+    alpha %in% c(0.5, 1, 1.5), beta %in% c(0,0.5)
+  )%>% bind_cols(tibble(char = "db"))
+bstFreVarTibPl <- bind_rows(bstFreVarTibPl, bstFreVarTibPlDb)
 #create factors and plots----
 ##factors----
-bstFreVarTibPl$k <- factor(bstFreVarTibPl$k, levels = c(1,2,3,0),
-                           labels = c(parse(text = TeX("db")), 
+bstFreVarTibPl$k <- factor(bstFreVarTibPl$k, levels = c(0,2,3,1),
+                           labels = c(parse(text = TeX("sb")), 
                                       parse(text = TeX("cb(2)")), 
                                       parse(text = TeX("cb(3)")), 
-                                      parse(text = TeX("sb"))
+                                      parse(text = TeX("db"))
                            )
 )
+ownPalette <- #based on dark2
+  c("cb(2)" = "#F8766D",  
+    "cb(3)" = "#7CAE00",  
+    "db" = "#00BFC4",  
+    "sb" = "#C77CFF")
+
 bstFreVarTibPl$marginal <- factor(bstFreVarTibPl$marginal,
                                   levels = c(3,4),
                                   labels = c("Fréchet", "Pareto")
@@ -44,27 +59,51 @@ bstFreVarTibPl$alpha <- factor(bstFreVarTibPl$alpha,
                                           parse(text = TeX("$\\alpha_0 = 1$")),
                                           parse(text = TeX("$\\alpha_0 = 1.5$")))
 )
-
+bstFreVarTibPl$char <- factor(bstFreVarTibPl$char, 
+                          levels = c("sb", "db"), 
+                          labels = c(parse(text = TeX("$\\sigma^2_{sb}$")),
+                                     parse(text = TeX("$\\sigma^2_{db}$"))
+                          ))
 ##plots----
-# textSize = 15
+textSize <- 17
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
 labsPlot <- labs(
   x = "Effective sample size m",
-  col = "Bootstrap")
+  col = "Bootstrap:")
 rescale <- 100
 
 bstVarPlot <- 
 bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
   filter(alpha != 2) %>% 
   ggplot()+
-  geom_line(aes(x = m, y = varBst*rescale, col = k))+
-  geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed")+
-  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  geom_line(aes(x = m, y = varBst*rescale, col = k),
+            linewidth = 1.1)+
+  geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed",
+            linewidth = 1.1)+
+  facet_grid(alpha~char+marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Variance * ",rescale),
         title = "Bootstrapping the variance of the shape estimator")+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme(
-    axis.text.x = element_text(angle = 90)
+    axis.text.x = element_text(angle = 90),
+    legend.position = "right",
+    plot.title = element_blank()
   )+
   scale_x_continuous(
     breaks = c(25, 50, 75)
@@ -73,7 +112,7 @@ bstVarPlot
 if(FALSE){
   ggsave(bstVarPlot, path = here("results/"), 
          filename = "plotFreFixNVarEstSupp.pdf", device = "pdf",
-         width = 10, height = 8, 
+         width = 10, height = 11, 
   )
 }
 #now for the main paper: no Fréchet marginals-----
@@ -83,16 +122,21 @@ bstVarPlotMain <-
   mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
   filter(alpha != 2) %>% 
   ggplot()+
-  geom_line(aes(x = m, y = varBst*rescale, col = k))+
-  geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed")+
-  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  geom_line(aes(x = m, y = varBst*rescale, col = k),
+            linewidth = 1.1)+
+  geom_line(aes(x = m, y = trueVar*rescale), col = "black", linetype = "dashed",
+            linewidth = 1.1)+
+  facet_grid(alpha~char+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Variance * ",rescale),
         title = "Bootstrapping the variance of the shape estimator")+
   themePlot+
   theme(
-    axis.text.x = element_text(angle = 90)
+    axis.text.x = element_text(angle = 90),
+    legend.position = "right",
+    plot.title = element_blank()
   )+
+  scale_color_manual(values = ownPalette)+
   scale_x_continuous(
     breaks = c(25, 50, 75)
   )
@@ -100,7 +144,7 @@ bstVarPlotMain
 if(FALSE){
   ggsave(bstVarPlotMain, path = here("results/"), 
          filename = "plotFreFixNVarEstMain.pdf", device = "pdf",
-         width = 10, height = 6, 
+         width = 10, height = 11, 
   )
 }
 
@@ -120,10 +164,10 @@ ciFreTibNFixPlot <- ciFreTibNfix %>% filter(
 
 
 
-ciFreTibNFixPlot$k <- factor(ciFreTibNFixPlot$k, levels = c(2,3,0,1),
-                             labels = c(parse(text = TeX("cb(2)")), 
+ciFreTibNFixPlot$k <- factor(ciFreTibNFixPlot$k, levels = c(0,2,3,1),
+                             labels = c(parse(text = TeX("sb")),
+                                parse(text = TeX("cb(2)")), 
                                         parse(text = TeX("cb(3)")), 
-                                        parse(text = TeX("sb")),
                                         parse(text = TeX("db"))
                              )
 )
@@ -152,16 +196,22 @@ ciCovPlot <-
   ciFreTibNFixPlot %>%  filter( m != 31) %>% 
   filter(k != "sb") %>% 
   ggplot()+
-  geom_line(aes(x = m, y = empCov, col = k))+
-  geom_hline(yintercept = 0.95, col = "black", linetype = "dashed")+
+  geom_line(aes(x = m, y = empCov, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 0.95, col = "black", linetype = "dashed",
+             linewidth = 1.1)+
   facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
   labsPlot+
-  labs( y = paste0("Average empirical coverage"),
+  labs( y = paste0("Empirical coverage"),
         title = "Confidence intervals for the shape")+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.title.x = element_blank())+
+        axis.title.x = element_blank(),
+        plot.title = element_blank(),
+        legend.position = "right"
+        )+
   scale_y_continuous(
     breaks = c(0.85, 0.9, 0.95)
   )
@@ -172,12 +222,17 @@ ciWidthPlot <-
   ciFreTibNFixPlot %>%  
   filter(k != "sb") %>% 
   ggplot()+
-  geom_line(aes(x = m, y = avgWidth, col = k))+
+  geom_line(aes(x = m, y = avgWidth, col = k),
+            linewidth = 1.1)+
   facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Width"),
         title = "Average width of confidence intervals")+
-  themePlot
+  scale_color_manual(values = ownPalette)+
+  themePlot+
+  theme(
+    legend.position = "right"
+  )
 ciWidthPlot
 
 ##now relative width Plot
@@ -187,8 +242,10 @@ ciWidthRel <- left_join(ciFreTibNFixPlot, ciWidthDb) %>%
   filter(k %in% c("cb(2)", "cb(3)")) %>% mutate(relWidth = dbWidth/avgWidth)
 ciWidthRelPlot <- ciWidthRel %>% filter( m != 31) %>% 
   ggplot()+
-  geom_line(aes(x = m, y = relWidth, col = k))+
-  geom_hline(yintercept = 1, col = "black", linetype = "dashed")+
+  geom_line(aes(x = m, y = relWidth, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+             linewidth = 1.1)+
   facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Relative average width"),
@@ -197,6 +254,7 @@ ciWidthRelPlot <- ciWidthRel %>% filter( m != 31) %>%
   scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme(strip.text.x = element_blank(), plot.title = element_blank(), 
         axis.text.x = element_text(angle = 90))
 
@@ -204,7 +262,8 @@ ciWidthRelPlot
 
 combCiPlot <- 
   ggarrange(ciCovPlot, ciWidthRelPlot, nrow = 2, align = "v", common.legend = T, 
-            legend = "bottom")
+            legend = "right",
+            heights = c(1, 1.05))
 combCiPlot
 
 if(FALSE){
@@ -220,16 +279,20 @@ ciCovPlotMain <-
   ciFreTibNFixPlotMain %>%  filter( m != 31, marginal == "Pareto") %>% 
   filter(k != "sb") %>% 
   ggplot()+
-  geom_line(aes(x = m, y = empCov, col = k))+
-  geom_hline(yintercept = 0.95, col = "black", linetype = "dashed")+
-  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
+  geom_line(aes(x = m, y = empCov, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 0.95, col = "black", linetype = "dashed",
+             linewidth = 1.1)+
+  facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
-  labs( y = paste0("Average empirical coverage"),
+  labs( y = paste0("Empirical coverage"),
         title = "Confidence intervals for the shape")+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.title.x = element_blank())+
+        axis.title.x = element_blank(),
+        plot.title = element_blank())+
   scale_y_continuous(
     breaks = c(0.85, 0.9, 0.95)
   )
@@ -240,12 +303,14 @@ ciWidthPlotMain <-
   ciFreTibNFixPlotMain %>%  filter( m != 31, marginal == "Pareto") %>%
   filter(k != "sb") %>% 
   ggplot()+
-  geom_line(aes(x = m, y = avgWidth, col = k))+
+  geom_line(aes(x = m, y = avgWidth, col = k),
+            linewidth = 1.1)+
   facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Width"),
         title = "Average width of confidence intervals")+
-  themePlot
+  themePlot+
+  scale_color_manual(values = ownPalette)
 ciWidthPlotMain
 
 ##now relative width Plot
@@ -255,8 +320,10 @@ ciWidthRelMain <- left_join(ciFreTibNFixPlotMain, ciWidthDbMain) %>%
   filter(k %in% c("cb(2)", "cb(3)")) %>% mutate(relWidth = dbWidth/avgWidth)
 ciWidthRelPlotMain <- ciWidthRelMain %>% filter( m != 31) %>% 
   ggplot()+
-  geom_line(aes(x = m, y = relWidth, col = k))+
-  geom_hline(yintercept = 1, col = "black", linetype = "dashed")+
+  geom_line(aes(x = m, y = relWidth, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+             linewidth = 1.1)+
   facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Relative average width"),
@@ -265,6 +332,7 @@ ciWidthRelPlotMain <- ciWidthRelMain %>% filter( m != 31) %>%
   scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
+  scale_color_manual(values = ownPalette)+
   theme(strip.text.x = element_blank(), plot.title = element_blank(), 
         axis.text.x = element_text(angle = 90))
 
@@ -272,7 +340,8 @@ ciWidthRelPlotMain
 
 combCiPlotMain <- 
   ggarrange(ciCovPlotMain, ciWidthRelPlotMain, nrow = 2, align = "v", common.legend = T, 
-            legend = "bottom")
+            legend = "right",
+            heights = c(1, 1.05))
 combCiPlotMain
 
 if(FALSE){
