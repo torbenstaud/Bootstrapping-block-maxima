@@ -80,7 +80,76 @@ plogrets_dbm[l.q] <- max(plogrets[qc[l.q]])
 nlogrets_dbm[l.q] <- max(nlogrets[qc[l.q]])
 
 
+
+#mean estimation
 #initialize estimation arrays
+pml.db <- matrix(nrow=l.q - 40, ncol=1)
+nml.db <- matrix(nrow=l.q - 40, ncol=1)
+pml.sb <- matrix(nrow=l.q - 40, ncol=1)
+nml.sb <- matrix(nrow=l.q - 40, ncol=1)
+pCiUpper <- matrix(nrow=l.q - 40, ncol=1)
+pCiLower <- matrix(nrow=l.q - 40, ncol=1)
+nCiUpper <- matrix(nrow=l.q - 40, ncol=1)
+nCiLower <- matrix(nrow=l.q - 40, ncol=1)
+pVars <- matrix(nrow = l.q - 40, ncol = 1)
+nVars <- matrix(nrow = l.q - 40, ncol = 1)
+pDbCiUpper <- matrix(nrow=l.q - 40, ncol=1)
+pDbCiLower <- matrix(nrow=l.q - 40, ncol=1)
+nDbCiUpper <- matrix(nrow=l.q - 40, ncol=1)
+nDbCiLower <- matrix(nrow=l.q - 40, ncol=1)
+pDbVars <- matrix(nrow = l.q - 40, ncol = 1)
+nDbVars <- matrix(nrow = l.q - 40, ncol = 1)
+
+# length of quarter: (62 rougly corresponds to one trading quarter)
+r <- 62 
+# Estimation loop (rolling window over the quarters)
+##Update: now estimate mean of quarterly block maxima of log-returns
+if(F){
+  t0 <- Sys.time()
+  for(i in 1:(l.q - 40)) {
+    ind <- which( date_quarters2 %in% (i:(i+39)) )
+    pdata <- plogrets[ind]; 
+    ndata <- nlogrets[ind]
+    # Disjoint Blocks:
+    pml.db[i,] <- mean(plogrets_dbm[i:(i+39)]) #CHANGE EST
+    nml.db[i,] <- mean(nlogrets_dbm[i:(i+39)]) #CHANGE EST
+    pDbQuantsAndVars <- plogrets_dbm[i:(i+39)] %>% 
+      ciCircmax(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
+    nDbQuantsAndVars <- nlogrets_dbm[i:(i+39)] %>% 
+      ciCircmax(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
+    pDbCiBst <- pDbQuantsAndVars[[1]]
+    nDbCiBst <- nDbQuantsAndVars[[1]] 
+    pDbVars[i,] <- pDbQuantsAndVars[[2]]
+    nDbVars[i,] <- nDbQuantsAndVars[[2]]
+    pDbCiUpper[i,] <- pDbCiBst[,2] #scale cis win
+    pDbCiLower[i,] <- pDbCiBst[,1] #shape cis win
+    nDbCiUpper[i,] <- nDbCiBst[,2] #scale cis loss
+    nDbCiLower[i,] <- nDbCiBst[,1] #shape cis loss
+    # Sliding Blocks:
+    pml.sb[i,] <- mleFre(slidMaxCNoLoop(pdata,r)) #CHANGE EST
+    nml.sb[i,] <- mleFre(slidMaxCNoLoop(ndata,r)) #CHANGE EST
+    pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3) #CHANGE EST
+    nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3) #CHANGE EST
+    pCiBst <- pQuantsAndVars[[1]]
+    nCiBst <- nQuantsAndVars[[1]]
+    pVars[i,] <- pQuantsAndVars[[2]]
+    nVars[i,] <- nQuantsAndVars[[2]]
+    pCiUpper[i,] <- pCiBst[,2] #scale cis win
+    pCiLower[i,] <- pCiBst[,1] #shape cis win
+    nCiUpper[i,] <- nCiBst[,2] #scale cis loss
+    nCiLower[i,] <- nCiBst[,1] #shape cis loss
+  }
+  print(difftime(Sys.time(), t0, units = "min")) #db takes approx 0.6 mins; sl 1.5mins
+  save(
+    pml.db, nml.db, pml.sb, nml.sb, 
+    pCiUpper, pCiLower, nCiUpper, nCiLower, pVars, nVars, 
+    pDbCiUpper, pDbCiLower, nDbCiUpper, nDbCiLower, pDbVars, nDbVars,
+    
+    file = here("data/caseStudyDataMean.R")
+  )
+}
+
+#alpha estimation (deprecated for the paper)
 pml.db <- matrix(nrow=l.q - 40, ncol=2)
 nml.db <- matrix(nrow=l.q - 40, ncol=2)
 pml.sb <- matrix(nrow=l.q - 40, ncol=2)
@@ -100,7 +169,6 @@ nDbVars <- matrix(nrow = l.q - 40, ncol = 2)
 
 # length of quarter: (62 rougly corresponds to one trading quarter)
 r <- 62 
-# Estimation loop (rolling window over the quarters)
 if(F){
   t0 <- Sys.time()
 for(i in 1:(l.q - 40)) {
@@ -145,7 +213,7 @@ for(i in 1:(l.q - 40)) {
     file = here("data/caseStudyData.R")
   )
 }
-load(here("data/caseStudyData.R"))
+load(here("data/caseStudyDataMean.R"))
 
 nDbTib <- tibble(
   data = nlogrets_dbm[41:200],
