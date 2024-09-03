@@ -78,7 +78,8 @@ v22 <- Vectorize(v22)
 ###   quants = Matrix with lower and upper bounds for shape and scale parameters
 ###   variance = vector with variances for shape and scale bootstrap estimation
 ###################################################
-ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3, mthd = "cb"){
+ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3,
+                      mthd = "cb"){
   bstSamp <- matrix(nrow = B, ncol = 2) #col1: shape, col2: scale
   if(mthd == "cb"){
     xxL <- lTableVec(xx, l = r*k)
@@ -121,4 +122,109 @@ ciCircmax <- function(xx, r, k, niv = 0.05, B = 10^3, mthd = "cb"){
                variance = 
                  apply(bstSamp, c(2), var)))
 }
+#ciCircmaxMean without maxxed input
+ciCircmaxMean <- function(xx, r, k, niv = 0.05, B = 10^3,
+                          mthd = "cb"){
+  bstSamp <- numeric(B)
+  if(mthd == "cb"){
+    xxMax <- kMaxC(xx, r, k = 0) #sliding block sample
+    xxL <- lTableVec(kMaxC(xx, r = r, k = k), l = r*k) #circmax sample
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      bstSamp[indB] <- 
+        tryCatch(meanCTabVec(unlist(kBootstrap(xxL))), error = function(cond){
+          cat("\n \n Error at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA))}
+        )
+      
+    }
+  }else if(mthd == "db"){
+    xxMax <- kMaxC(xx, r =r, k = 1) #disjoint block sample
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      bstSamp[indB] <-
+        tryCatch(mean(dbBootstrap(xxMax)), error = function(cond){
+          cat("\n \n DB Error at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA))
+        })
+    }
+  }else {
+    stop("Invalid method. Use 'cb' or 'db'.")
+  }
+  bstSamp <- na.omit(bstSamp)
+  quants <- quantile(bstSamp, c(1-niv/2, niv/2)) 
+  #auxiliary function to calculate basic boostrap confidence intervals
+  auxFun <- function(xx, qqs){
+    ci <- numeric(2)
+    ci <- 2*xx - qqs
+    return (ci %>% unname())
+  }
+  est <- mean(xxMax) #estimator based on db or sb
+  return( list(quants = auxFun(est, quants), 
+               variance = 
+                 var(bstSamp)
+  ))
+}
+#fixing the function: 
+#input is now NOT maxxed already
+ciCircmaxProb <- function(xx, r, k, niv = 0.05, B = 10^3,
+                          mthd = "cb", tresh = 0.04){
+  #aux function for checking if smaller than treshhold
+  treshInd <- function(xx){
+    ifelse(xx <= tresh, 1, 0)
+  }
+  bstSamp <- numeric(B)
+  if(mthd == "cb"){
+    xxMax <- kMaxC(xx, r, k = 0) #sliding block sample
+    xxL <- lTableVec(kMaxC(xx, r = r, k = k), l = r*k) #circmax sample
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      tmpVals <- 
+        unlist(kBootstrap(xxL))
+      names(tmpVals) <- names(tmpVals) %>% as.numeric() %>% 
+        treshInd()
+      bstSamp[indB] <- 
+        tryCatch(meanCTabVec(tmpVals), error = function(cond){
+          cat("\n \n Error at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA))}
+        )
+      
+    }
+  }else if(mthd == "db"){
+    xxMax <- kMaxC(xx, r =r, k = 1) #disjoint block sample
+    for(indB in seq(1,B)){
+      set.seed(indB)
+      tmpVals <- dbBootstrap(xxMax) %>% treshInd()
+      bstSamp[indB] <-
+        tryCatch(mean(tmpVals), error = function(cond){
+          cat("\n \n DB Error at indB = ", indB, "\n exact Error: ")
+          message(conditionMessage(cond))
+          return(c(NA))
+        })
+    }
+  }else {
+    stop("Invalid method. Use 'cb' or 'db'.")
+  }
+  bstSamp <- na.omit(bstSamp)
+  quants <- quantile(bstSamp, c(1-niv/2, niv/2)) 
+  #auxiliary function to calculate basic boostrap confidence intervals
+  auxFun <- function(xx, qqs){
+    ci <- numeric(2)
+    ci <- 2*xx - qqs
+    return (ci %>% unname())
+  }
+  est <- mean(treshInd(xxMax)) #estimator based on db or sb
+  return( list(quants = auxFun(est, quants), 
+               variance = 
+                 var(bstSamp)
+  ))
+}
 
+
+
+
+
+#error: deprecated

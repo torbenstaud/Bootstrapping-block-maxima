@@ -31,7 +31,7 @@ estsArray <- meanArray[,5,] #5 is the index for m = 80
 bstArray <- estArray
 # parameters: 90 (blocksize), 1(gpd), 3(tsmod), -0.2(gamma), 10^6(repetitions),
 # 0.5(beta)
-#truthMean <- getTruthC(90, 1,3,-0.2,10^6,0.5)
+truthMean <- getTruthC(90, 1,3,-0.2,10^6,0.5)
 estsErrArray <- estsArray - truthMean
 ##create bootstrap error array
 tmpJoinArray <- array(dim = c(N, length(kVec), B+1))
@@ -220,8 +220,8 @@ pQ4 <- createQQMean(2,2, noY = T)
 #combine both qq and histogram plots
 histQQPlots <- ggarrange(pQ1, pQ2, pQ3, pQ4, pH1,pH2,pH3,pH4, 
                        ncol = 4, nrow = 2, common.legend = T, 
-                       legend = "right", widths = c(1.3,1,1,1,1,1,1,1), 
-                       heights = c(1,1.2))
+                       legend = "right", widths = c(1.3,1,1,1,1,1,1,1),
+                       heights = c(1,1.35))
 #pubhistQQPlots <- annotate_figure(histQQPlots, 
 #                top = text_grob("Mean estimation error", 
 #                                size = textSize, face = "bold"))
@@ -232,7 +232,7 @@ if(F){
   
 ggsave(histQQPlots, filename = "plotHistQQMean.pdf",
        device = "pdf", path = here("results/"),
-       width = 16, height = 10)
+       width = 10, height = 6)
 }
 
 #vergleiche schätzer----

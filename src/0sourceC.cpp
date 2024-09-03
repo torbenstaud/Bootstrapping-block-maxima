@@ -548,7 +548,7 @@ double varCTabVec( Rcpp::NumericVector xx){
 }
 
 
-// calculate empirical mean of a unlisted lTable with named Vectors inside
+// calculate empirical mean of an unlisted lTable with named Vectors inside
 // [[Rcpp::export]]
 double meanCTabVec( Rcpp::NumericVector xx){
   double mBar, n;

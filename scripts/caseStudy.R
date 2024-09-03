@@ -81,12 +81,14 @@ nlogrets_dbm[l.q] <- max(nlogrets[qc[l.q]])
 
 
 
-#mean estimation
+
 #initialize estimation arrays
 pml.db <- matrix(nrow=l.q - 40, ncol=1)
 nml.db <- matrix(nrow=l.q - 40, ncol=1)
 pml.sb <- matrix(nrow=l.q - 40, ncol=1)
 nml.sb <- matrix(nrow=l.q - 40, ncol=1)
+pml.cb <- matrix(nrow=l.q - 40, ncol=1)
+nml.cb <- matrix(nrow=l.q - 40, ncol=1)
 pCiUpper <- matrix(nrow=l.q - 40, ncol=1)
 pCiLower <- matrix(nrow=l.q - 40, ncol=1)
 nCiUpper <- matrix(nrow=l.q - 40, ncol=1)
@@ -103,7 +105,65 @@ nDbVars <- matrix(nrow = l.q - 40, ncol = 1)
 # length of quarter: (62 rougly corresponds to one trading quarter)
 r <- 62 
 # Estimation loop (rolling window over the quarters)
-##Update: now estimate mean of quarterly block maxima of log-returns
+
+#extremal probabilities
+
+##determine a treshold value: quantile of the block maxima
+treshQuants <- quantile(
+  kMaxC(nlogrets, r, 1), c(0.9, 0.95)
+) # ~4 and 6 %
+
+## modify to use mean methodology
+treshInd <- function(xx){
+  ifelse(xx <= 0.04, 1, 0)
+}
+if(F){
+  t0 <- Sys.time()
+  for(i in 1:(l.q - 40)) {
+    ind <- which( date_quarters2 %in% (i:(i+39)) )
+    pdata <- plogrets[ind]; 
+    ndata <- nlogrets[ind]
+    # Disjoint Blocks:
+    pml.db[i,] <- mean(treshInd(plogrets_dbm[i:(i+39)]))
+    nml.db[i,] <- mean(treshInd(nlogrets_dbm[i:(i+39)]))
+    pDbQuantsAndVars <- pdata %>% ciCircmaxProb(r = r, k = 2, mthd = "db")
+    nDbQuantsAndVars <- ndata %>% ciCircmaxProb(r = r, k = 2, mthd = "db")
+    pDbCiBst <- pDbQuantsAndVars[[1]]
+    nDbCiBst <- nDbQuantsAndVars[[1]] 
+    pDbVars[i] <- pDbQuantsAndVars[[2]]
+    nDbVars[i] <- nDbQuantsAndVars[[2]]
+    pDbCiUpper[i] <- pDbCiBst[2] 
+    pDbCiLower[i] <- pDbCiBst[1] 
+    nDbCiUpper[i] <- nDbCiBst[2] 
+    nDbCiLower[i] <- nDbCiBst[1] 
+    # Sliding Blocks:
+    pml.sb[i] <- mean(treshInd(slidMaxCNoLoop(pdata,r)))
+    nml.sb[i] <- mean(treshInd(slidMaxCNoLoop(ndata,r)))
+    pQuantsAndVars <- pdata %>% ciCircmaxProb(r = r, k = 2, mthd = "cb")
+    nQuantsAndVars <- ndata %>% ciCircmaxProb(r = r, k = 2, mthd = "cb")
+    pCiBst <- pQuantsAndVars[[1]]
+    nCiBst <- nQuantsAndVars[[1]]
+    pVars[i] <- pQuantsAndVars[[2]]
+    nVars[i] <- nQuantsAndVars[[2]]
+    pCiUpper[i] <- pCiBst[2] #scale cis win
+    pCiLower[i] <- pCiBst[1] #shape cis win
+    nCiUpper[i] <- nCiBst[2] #scale cis loss
+    nCiLower[i] <- nCiBst[1] #shape cis loss
+    #cb estimator to check
+    nml.cb[i] <- mean(treshInd(kMaxC(ndata,r,2)))
+    pml.cb[i] <- mean(treshInd(kMaxC(pdata,r,2)))
+  }
+  print(difftime(Sys.time(), t0, units = "min")) #takes approx 0.4 mins
+  save(
+    pml.db, nml.db, pml.sb, nml.sb, 
+    pCiUpper, pCiLower, nCiUpper, nCiLower, pVars, nVars, 
+    pDbCiUpper, pDbCiLower, nDbCiUpper, nDbCiLower, pDbVars, nDbVars,
+    
+    file = here("data/caseStudyDataExtrProb.R")
+  )
+}
+
+#Estimation of the mean of a log return blockmaxima
 if(F){
   t0 <- Sys.time()
   for(i in 1:(l.q - 40)) {
@@ -114,30 +174,30 @@ if(F){
     pml.db[i,] <- mean(plogrets_dbm[i:(i+39)]) #CHANGE EST
     nml.db[i,] <- mean(nlogrets_dbm[i:(i+39)]) #CHANGE EST
     pDbQuantsAndVars <- plogrets_dbm[i:(i+39)] %>% 
-      ciCircmax(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
+      ciCircmaxMean(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
     nDbQuantsAndVars <- nlogrets_dbm[i:(i+39)] %>% 
-      ciCircmax(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
+      ciCircmaxMean(r,2, B = 2*10^3, mthd = "db") #CHANGE CICIRCMAX?
     pDbCiBst <- pDbQuantsAndVars[[1]]
     nDbCiBst <- nDbQuantsAndVars[[1]] 
-    pDbVars[i,] <- pDbQuantsAndVars[[2]]
-    nDbVars[i,] <- nDbQuantsAndVars[[2]]
-    pDbCiUpper[i,] <- pDbCiBst[,2] #scale cis win
-    pDbCiLower[i,] <- pDbCiBst[,1] #shape cis win
-    nDbCiUpper[i,] <- nDbCiBst[,2] #scale cis loss
-    nDbCiLower[i,] <- nDbCiBst[,1] #shape cis loss
+    pDbVars[i] <- pDbQuantsAndVars[[2]]
+    nDbVars[i] <- nDbQuantsAndVars[[2]]
+    pDbCiUpper[i] <- pDbCiBst[2] 
+    pDbCiLower[i] <- pDbCiBst[1] 
+    nDbCiUpper[i] <- nDbCiBst[2] 
+    nDbCiLower[i] <- nDbCiBst[1] 
     # Sliding Blocks:
-    pml.sb[i,] <- mleFre(slidMaxCNoLoop(pdata,r)) #CHANGE EST
-    nml.sb[i,] <- mleFre(slidMaxCNoLoop(ndata,r)) #CHANGE EST
-    pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3) #CHANGE EST
-    nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3) #CHANGE EST
+    pml.sb[i] <- mean(slidMaxCNoLoop(pdata,r)) #CHANGE EST
+    nml.sb[i] <- mean(slidMaxCNoLoop(ndata,r)) #CHANGE EST
+    pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmaxMean(r,2, B = 2*10^3) #wrong
+    nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmaxMean(r,2, B = 2*10^3) #wrong
     pCiBst <- pQuantsAndVars[[1]]
     nCiBst <- nQuantsAndVars[[1]]
-    pVars[i,] <- pQuantsAndVars[[2]]
-    nVars[i,] <- nQuantsAndVars[[2]]
-    pCiUpper[i,] <- pCiBst[,2] #scale cis win
-    pCiLower[i,] <- pCiBst[,1] #shape cis win
-    nCiUpper[i,] <- nCiBst[,2] #scale cis loss
-    nCiLower[i,] <- nCiBst[,1] #shape cis loss
+    pVars[i] <- pQuantsAndVars[[2]]
+    nVars[i] <- nQuantsAndVars[[2]]
+    pCiUpper[i] <- pCiBst[2] #scale cis win
+    pCiLower[i] <- pCiBst[1] #shape cis win
+    nCiUpper[i] <- nCiBst[2] #scale cis loss
+    nCiLower[i] <- nCiBst[1] #shape cis loss
   }
   print(difftime(Sys.time(), t0, units = "min")) #db takes approx 0.6 mins; sl 1.5mins
   save(
@@ -193,8 +253,8 @@ for(i in 1:(l.q - 40)) {
   # Sliding Blocks:
   pml.sb[i,] <- mleFre(slidMaxCNoLoop(pdata,r))
   nml.sb[i,] <- mleFre(slidMaxCNoLoop(ndata,r))
-  pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)
-  nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)
+  pQuantsAndVars <- pdata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)#wrong: 
+  nQuantsAndVars <- ndata %>% slidMaxCNoLoop(r) %>% ciCircmax(r,2, B = 2*10^3)#wrong:
   pCiBst <- pQuantsAndVars[[1]]
   nCiBst <- nQuantsAndVars[[1]]
   pVars[i,] <- pQuantsAndVars[[2]]
@@ -215,6 +275,404 @@ for(i in 1:(l.q - 40)) {
 }
 load(here("data/caseStudyDataMean.R"))
 
+
+#evaluation for extremal Probability Prob(M_{r} \leq 0.04)
+load(here("data/caseStudyDataExtrProb.R"))
+
+nDbTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "db",
+  type = "losses",
+  avg = nml.db[,1]
+)
+pDbTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "db",
+  type = "wins",
+  avg = pml.db[,1]
+)
+nSlTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "sb",
+  type = "losses",
+  avg = nml.sb[,1]
+)
+pSlTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "sb",
+  type = "wins",
+  avg = pml.sb[,1]
+)
+#create bootstrap confidence interval tibbles for disjoint blocks
+pDbCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "prob",
+  ciType = "bstrDb",
+  Upper = pDbCiUpper[,1],
+  Lower = pDbCiLower[,1]
+)%>% left_join(pDbTib %>% 
+                 select(-method))
+
+nDbCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "prob",
+  ciType = "bstrDb",
+  Upper = nDbCiUpper[,1],
+  Lower = nDbCiLower[,1]
+) %>% left_join( nDbTib  %>% select(-method))
+#create bootstrap confidence interval tibbles for sliding blocks
+pCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "prob",
+  ciType = "bstr",
+  Upper = pCiUpper[,1],
+  Lower = pCiLower[,1]
+)  %>% left_join(
+  pSlTib %>% 
+    select(-method))
+
+nCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "prob",
+  ciType = "bstr",
+  Upper = nCiUpper[,1],
+  Lower = nCiLower[,1]
+)  %>% left_join(
+  nSlTib %>% 
+    select(-method))
+
+
+fullCiTib <- bind_rows(
+  bind_rows(pDbCiTib, nDbCiTib),
+  bind_rows(pCiTib, nCiTib)
+)
+fullCiTib <- fullCiTib %>% 
+  filter(ciType %in% c("bstrDb", "bstr"))
+
+
+plotTib <- fullCiTib %>% 
+  mutate(Upper = pmin(Upper, 1))
+
+
+###Plotting
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+plotTib$ciType <- factor(plotTib$ciType, levels = c("bstrDb", "bstr"))
+rescale <- 1
+# plotTib <- 
+#   plotTib %>% filter(dateInd %% 2 == 1)
+cBandsPlot <- 
+  plotTib %>% 
+  filter(param == "prob", type == "losses") %>% 
+  ggplot(aes(x = dateInd, y = avg))+
+  geom_line(
+    data= plotTib %>% filter(ciType != "nApproxDb"),
+    aes(x = dateInd, y = data * rescale), col = "darkblue")+
+  geom_ribbon(aes(ymin = Lower*rescale, ymax = Upper*rescale), alpha = 0.4,
+              linewidth = 0.1, col = "red")+
+  geom_line(data = plotTib %>% 
+              filter(param == "prob", type == "losses"), 
+            aes(x = dateInd, avg*rescale),
+            col = "black")+
+  facet_wrap(vars(ciType))+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  facet_wrap(vars(ciType), 
+             labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "S&P 500 mean confidence bands",
+    y = paste0("Probability")
+  )
+cBandsPlot
+
+if(F){
+  ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 6)
+}
+#widths/ratio plot
+widthPlotTib <- plotTib %>% mutate(width = Upper- Lower) %>% 
+  select(-c(Lower, Upper, avg))
+dbTib <- widthPlotTib %>% filter(ciType == "bstrDb") %>% select(-ciType) %>% 
+  rename(dbWidth = "width")
+ratioTib <- widthPlotTib %>% left_join(dbTib) %>% mutate(
+  ratio = dbWidth/width
+) %>% filter(ciType == "bstr")
+avgRatio <- ratioTib$ratio %>% mean()
+widthPlot <- 
+  ratioTib %>% 
+  filter(param == "prob", type == "losses") %>% 
+  ggplot(aes(x = dateInd, y = ratio))+
+  geom_line()+
+  geom_hline(yintercept = avgRatio, col = "red", linetype = "longdash")+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  themePlot+
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "S&P 500 mean confidence bands",
+    y = paste0("Ratio")
+  )
+widthPlot
+#evaluation for the mean case study
+if(F){
+  ggsave(plot = widthPlot, filename = here("results/plotCaseStudyWidths.pdf"),
+         device = "pdf", width = 10, height = 6)
+}
+
+
+nDbTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "db",
+  type = "losses",
+  avg = nml.db[,1]
+)
+pDbTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "db",
+  type = "wins",
+  avg = pml.db[,1]
+)
+nSlTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "sb",
+  type = "losses",
+  avg = nml.sb[,1]
+)
+pSlTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  method = "sb",
+  type = "wins",
+  avg = pml.sb[,1]
+)
+#create bootstrap confidence interval tibbles for disjoint blocks
+pDbCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "avg",
+  ciType = "bstrDb",
+  Upper = pDbCiUpper[,1],
+  Lower = pDbCiLower[,1]
+)%>% left_join(pDbTib %>% 
+  select(-method))
+
+nDbCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "avg",
+  ciType = "bstrDb",
+  Upper = nDbCiUpper[,1],
+  Lower = nDbCiLower[,1]
+) %>% left_join( nDbTib  %>% select(-method))
+#create bootstrap confidence interval tibbles for sliding blocks
+pCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "wins",
+  param = "avg",
+  ciType = "bstr",
+  Upper = pCiUpper[,1],
+  Lower = pCiLower[,1]
+)  %>% left_join(
+  pSlTib %>% 
+  select(-method))
+
+nCiTib <- tibble(
+  data = nlogrets_dbm[41:200],
+  dateInd = seq_along(date_final[qc[41:200]]),
+  date = date_final[qc[41:200]],
+  type = "losses",
+  param = "avg",
+  ciType = "bstr",
+  Upper = nCiUpper[,1],
+  Lower = nCiLower[,1]
+)  %>% left_join(
+  nSlTib %>% 
+  select(-method))
+
+
+fullCiTib <- bind_rows(
+  bind_rows(pDbCiTib, nDbCiTib),
+  bind_rows(pCiTib, nCiTib)
+)
+fullCiTib <- fullCiTib %>% 
+  filter(ciType %in% c("bstrDb", "bstr"))
+
+rescale <- 100
+
+plotTib <- fullCiTib
+plotTib <- fullCiTib %>% 
+  mutate(val = ifelse(param == "scale", val*rescale, val),
+         Upper = ifelse(param == "scale", Upper*rescale, Upper), 
+         Lower = ifelse(param == "scale", Lower*rescale, Lower))
+
+
+###Plotting
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+plotTib$ciType <- factor(plotTib$ciType, levels = c("bstrDb", "bstr"))
+rescale <- 100
+cBandsPlot <- 
+  plotTib %>% 
+  filter(param == "avg", type == "losses") %>% 
+  ggplot(aes(x = dateInd, y = avg))+
+  geom_line(
+    data= plotTib %>% filter(ciType != "nApproxDb"),
+    aes(x = dateInd, y = data * rescale/50), col = "darkblue")+
+  geom_ribbon(aes(ymin = Lower*rescale, ymax = Upper*rescale), alpha = 0.4,
+              linewidth = 0.1, col = "red")+
+  geom_line(data = plotTib %>% 
+              filter(param == "avg", type == "losses"), 
+            aes(x = dateInd, avg*rescale),
+            col = "black")+
+  facet_wrap(vars(ciType))+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  facet_wrap(vars(ciType), 
+             labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "S&P 500 mean confidence bands",
+    y = paste0("Mean * ", rescale)
+  )
+cBandsPlot
+
+if(F){
+  ggsave(plot = cBandsPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 6)
+}
+
+
+##Plot of the widths
+plotTibWidth <- 
+  plotTib %>% 
+  filter(param == "shape") %>% 
+  mutate(width = Upper - Lower)
+
+plotTibWidth %>% 
+  ggplot(aes(x = dateInd, width, col = ciType))+
+  geom_line()+
+  facet_wrap(~type, 
+             labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  scale_color_discrete(name = "Type", 
+                       labels = 
+                         c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
+  )
+##Plot of the relative widths
+plotTibRel <- left_join(
+  plotTibWidth %>% filter(ciType == "bstr") %>% 
+    select(dateInd, date, type, param, width),
+  plotTibWidth %>% filter(ciType=="bstrDb") %>% rename(dbWidth = "width") %>% 
+    select(dateInd, date, type, param, dbWidth)
+) %>% mutate(relWidth = dbWidth/width) 
+plotTibRel %>% 
+  ggplot(aes(x = dateInd, relWidth))+
+  geom_line()+
+  geom_hline(yintercept = 1, linetype = "dashed", col = "red")+
+  facet_wrap(~type, 
+             labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
+  scale_x_continuous(breaks = c(1,49,97,145), 
+                     labels = (plotTib$date %>% unique)[c(1,49,97,145)])+
+  scale_color_discrete(name = "Type", 
+                       labels = 
+                         c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
+  )
+##average widths
+plotTib %>% group_by(ciType, type) %>% 
+  filter(param == "shape") %>% 
+  mutate(width = Upper - Lower) %>% 
+  summarise(avgWidth = mean(width)) %>% 
+  ggplot(aes(x = ciType, y = avgWidth))+
+  geom_col()+
+  facet_wrap(~type, 
+             labeller = labeller(type = c(losses = "Losses", wins = "Wins")))+
+  themePlot+
+  labs(y = "Average width of confidence interval")+
+  scale_x_discrete(name = "Method",
+                   labels = 
+                     c(bstr = "BCI", bstrApprox = "NBCI", nApprox = "NCI")
+  )
+
+
+
+#evaluation for shape parameter: not in the paper
 nDbTib <- tibble(
   data = nlogrets_dbm[41:200],
   dateInd = seq_along(date_final[qc[41:200]]),
