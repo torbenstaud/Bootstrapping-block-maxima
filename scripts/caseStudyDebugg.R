@@ -1,4 +1,15 @@
 library(evd)
+library(quantmod) #download financial data from yahoo finance
+library(tidyverse) #tidyverse package suite for data manipulation
+require(here) #construct paths that are relative to the project's root directory
+library(Rcpp) #enable the use of C++ code within R for performance
+library(gsl) # package for zeta functions etc.
+#files sourcen
+source(here("src/0source.r"))
+sourceCpp(here("src/0sourceC.cpp"))
+source(here("src/sourceCase.R"))
+source(here("src/theme.R"))
+
 #vergleichbare n,r wie in case study
 N <- 160
 n <- 2500

@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------
-# Script Name: speedComparison.R
+# Script Name: caseStudyNew.R
 # Purpose: This scripts produces runtime comparison plots for disjoint blocks 
 #          vs circmax bootstrapping.
 # Author: Torben Staud
@@ -112,7 +112,7 @@ treshQuants <- quantile(
 ) # ~4 and 6 %
 
 treshold <- treshQuants[2] #median
-threshInd <- function(xx){
+treshInd <- function(xx){
   ifelse(xx <= treshold, 1, 0)
 }
 
@@ -156,14 +156,14 @@ if(T){
 }
 
 #quick and dirty comparison
-pEst.cb %>% var()
-pEst.db %>% var()
-pEst.sb %>% var()
+nEst.cb %>% var()
+nEst.db %>% var()
+nEst.sb %>% var()
 nbstVars %>% apply(c(2), mean) %>% 
   (function(xx) {xx[1]/xx[2]})
 
-cbWidths <- pCiUpper - pCiLower
-dbWidths <- pDbCiUpper - pDbCiLower
+cbWidths <- nCiUpper - nCiLower
+dbWidths <- nDbCiUpper - nDbCiLower
 (dbWidths/cbWidths) %>% mean()
 
 
@@ -214,6 +214,6 @@ nEst.sb %>% var()
 nbstVars %>% apply(c(2), mean) %>% 
   (function(xx) {xx[1]/xx[2]})
 
-cbWidths <- pCiUpper - pCiLower
-dbWidths <- pDbCiUpper - pDbCiLower
+cbWidths <- nCiUpper - nCiLower
+dbWidths <- nDbCiUpper - nDbCiLower
 (dbWidths/cbWidths) %>% mean()

@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------
-# Script Name: speedComparison.R
+# Script Name: caseStudy.R
 # Purpose: This scripts produces runtime comparison plots for disjoint blocks 
 #          vs circmax bootstrapping.
 # Author: Torben Staud

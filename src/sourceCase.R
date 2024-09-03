@@ -171,7 +171,7 @@ ciCircmaxMean <- function(xx, r, k, niv = 0.05, B = 10^3,
 #input is now NOT maxxed already
 ciCircmaxProb <- function(xx, r, k, niv = 0.05, B = 10^3,
                           mthd = "cb", tresh = 0.04){
-  #aux function for checking if smaller than treshhold
+  #aux function for checking if smaller than treshold
   treshInd <- function(xx){
     ifelse(xx <= tresh, 1, 0)
   }
