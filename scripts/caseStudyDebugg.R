@@ -176,6 +176,10 @@ ts.plot(cbWidthsMat[,2]) #cb(2)
 ts.plot(cbWidthsMat[,3]) #cb(3)
 
 
+
+if(F){
+  
+
 #they bands are way to irregular: what happens with iid normal bands for mean estim
 N <- 160
 n <- 200 #ceiling(2500/60) #approx 42
@@ -209,6 +213,6 @@ plotTib %>% ggplot(aes(x = day ,y = est)) +
   geom_ribbon(
     aes(ymin = lower, ymax = upper), alpha = 0.4
   )
-
+}
 #clean up  
 rm(testSamp)

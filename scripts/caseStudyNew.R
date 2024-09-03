@@ -167,6 +167,10 @@ dbWidths <- nDbCiUpper - nDbCiLower
 (dbWidths/cbWidths) %>% mean()
 
 
+
+
+if(F){
+
 #mean of the negative log returns blockmaxima ----
 
 #array for bootstrap variances
@@ -217,3 +221,6 @@ nbstVars %>% apply(c(2), mean) %>%
 cbWidths <- nCiUpper - nCiLower
 dbWidths <- nDbCiUpper - nDbCiLower
 (dbWidths/cbWidths) %>% mean()
+
+
+}
