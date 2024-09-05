@@ -1,8 +1,16 @@
-#load libraries
+#load libraries----
 library(readr) #read and download files
 library(tidyr) #data wrangling
 library(dplyr) #data wrangling
 library(ggplot2) #plotting
+library(here) #relative paths
+library(Rcpp) #cpp api
+#source files----
+source(here("src/0source.R"))
+sourceCpp(here("src/0sourceC.cpp"))
+source(here("src/sourceCase.R"))
+source(here("src/theme.R"))
+
 
 #download precipitation data (location: Aachen, Germany) and read it
 ##link leads to an zip-archive
@@ -40,20 +48,28 @@ data <- data %>% filter(as.double(format(day, "%Y")) >=1930)
 data %>% ggplot(aes(x = day, y = RSK))+
   geom_line()
 data %>% filter(RSK < 0) #false data in 1945
-data <- data %>% filter(as.double(format(day, "%Y")) >=1946)
+data <- data %>% filter(as.double(format(day, "%Y")) >=1946) %>% 
+  mutate(year = as.double(format(day, "%Y")))
 data %>% ggplot(aes(x = day, y = RSK))+
   geom_line()
-nY <- 66
+# data <- data %>% bind_rows(
+#   tibble(day = data$day + length(data$day), RSK = data$RSK) %>% 
+#     mutate(year = as.double(as.double(format(day, "%Y"))))
+# )
+# data <- data %>% bind_rows(
+#   tibble(day = data$day + length(data$day), RSK = data$RSK) %>% 
+#     mutate(year = as.double(as.double(format(day, "%Y"))))
+# )
+nY <- max(data$year) - min(data$year) + 1
 ## -> left with 66 full years of daily observations
 
 ## diagnostics: are disjoint block maxima over a year approx independent?
 dbmsFull <- data %>% group_by(year) %>% summarize(blockmax = max(RSK))
 dbmsFull$blockmax %>% acf() #no significant evidence against independence
 #plan: rolling window over 40 years and 1 year jumps
-winSize <- 40
-data <- data %>% mutate(year = as.double(format(day, "%Y")))
+winSize <-  40
+blockSize <- 365 #one year blocks
 
-nY
 ##vector of disjoint yearly precipitation maxima
 precDb <- numeric(nY)
 yearVec <- (data$year) %>% unique()
@@ -61,28 +77,156 @@ for(indY in seq_along(precDb)){
   precDb[indY] <- 
     (data %>% filter(year == yearVec[indY]))$RSK %>% max()
 }
+##calculate estimators and bootstrap CIs
+DbArr <- array( dim = c(nY - winSize + 1, 3))
+SbArr <- array( dim = c(nY - winSize + 1, 3))
+CbArr <- array( dim = c(nY - winSize + 1, 3))
+bstVars <- array(dim = c(nY - winSize + 1, 2))
+for(indW in seq(1, nY - winSize + 1)){
+  dataWin <- (data %>% filter(
+    year %in% seq(yearVec[indW], yearVec[indW] + 39)
+  ))$RSK
+  DbArr[indW,1] <- dataWin %>% 
+    kMaxC(r = blockSize, k = 1) %>% 
+    mean() #for mean study
+  ciDbDat <- 
+    ciCircmaxMean(dataWin, B = 1000, r = blockSize, k = 1, mthd = "db")
+  DbArr[indW,c (2,3)] <- ciDbDat[[1]]
+  bstVars[indW,1] <- ciDbDat[[2]]
+  SbArr[indW,1] <- (dataWin) %>% 
+    kMaxC(r = blockSize, k = 0) %>% 
+    mean()
+    
+  CbArr[indW,1] <- (dataWin) %>% 
+    kMaxC(r = blockSize, k = 2) %>% 
+    mean()
+  ciCbDat <- 
+    ciCircmaxMean(dataWin, B = 1000, r = blockSize, k = 2, mthd = "cb")
+  CbArr[indW,c (2,3)] <- ciCbDat[[1]]
+  bstVars[indW,2] <- ciCbDat[[2]]
+}
+# create tibble with data
+ciTib <- bind_rows(
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "db",
+    estim = DbArr[,1],
+    lower = DbArr[,2],
+    upper = DbArr[,3]
+  ), 
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "cb",
+    estim = CbArr[,1],
+    lower = CbArr[,2],
+    upper = CbArr[,3]
+  ),
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "sb",
+    estim = SbArr[,1],
+    lower = SbArr[,2],
+    upper = SbArr[,3]
+  )
+  
+)
+ciTib %>% mutate(
+  width = upper - lower
+) %>% View()
+
+avgWidths <- (ciTib %>% mutate(
+  width = upper - lower) %>% group_by(type) %>% 
+  summarise(avgWidth = median(width)) %>% 
+  filter(type != "sb") %>% select(avgWidth))[[1]]
+avgWidths[2]/avgWidths[1]
+#plotting of confidence intervals
+
+ciTibPlt <- ciTib
+ciTibPlt <- ciTibPlt %>% filter(type != "sb")
+
+ciTibPlt %>% ggplot(aes(x = year))+
+  geom_line(aes(x = year, y = estim), col = "black")+
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4, linewidth = 0.4)+
+  facet_wrap(vars(type))
+
+#analysis for the estimation of Prob(M_r <= threshold)
 ##threshold for a yearly Maximum will be set as the empirical median of the DB maxima
 thresh <- precDb %>% quantile(0.5) %>% unname()
 threshInd <- function(xx){
   ifelse(xx <= thresh, 1, 0)
 }
-estDb <- numeric(nY - winSize + 1)
-estSb <- numeric(nY - winSize + 1)
-estCb <- numeric(nY - winSize +1)
-
-for(indW in seq_along(estDb)){
-  dataWin <- data %>% filter(
+DbArr <- array( dim = c(nY - winSize + 1, 3))
+SbArr <- array( dim = c(nY - winSize + 1, 3))
+CbArr <- array( dim = c(nY - winSize + 1, 3))
+bstVars <- array(dim = c(nY - winSize + 1, 2))
+for(indW in seq(1, nY - winSize + 1)){
+  dataWin <- (data %>% filter(
     year %in% seq(yearVec[indW], yearVec[indW] + 39)
-  )
-  estDb[indW] <- (dataWin$RSK) %>% 
-    RcppRoll::roll_max(n = 365, by = 365, na.rm = T) %>% 
+  ))$RSK
+  DbArr[indW,1] <- dataWin %>% 
+    kMaxC(r = blockSize, k = 1) %>% 
     threshInd() %>% mean()
-  estSb[indW] <- (dataWin$RSK) %>% 
-    RcppRoll::roll_max(n = 365, na.rm = T) %>% 
+  #mean() #for mean study
+  ciDbDat <- 
+    ciCircmaxProb(dataWin, B = 1000, r = blockSize, k = 1, mthd = "db", 
+                  tresh = thresh)
+  #ciCircmaxMean(dataWin, B = 250, r = blockSize, k = 1, mthd = "db")
+  DbArr[indW,c (2,3)] <- ciDbDat[[1]]
+  bstVars[indW,1] <- ciDbDat[[2]]
+  SbArr[indW,1] <- (dataWin) %>% 
+    kMaxC(r = blockSize, k = 0) %>% 
     threshInd() %>% mean()
-  estCb[indW] <- (dataWin$RSK) %>% 
-    RcppRoll::roll_max(n = 365, na.rm = T) %>% 
+  #var()
+  CbArr[indW,1] <- (dataWin) %>% 
+    kMaxC(r = blockSize, k = 2) %>% 
     threshInd() %>% mean()
+  #var()
+  ciCbDat <- ciCircmaxProb(dataWin, B = 1000, r = blockSize, k = 2, mthd = "cb", 
+                           tresh = thresh)
+  #ciCircmaxMean(dataWin, B = 250, r = blockSize, k = 2, mthd = "cb")
+  CbArr[indW,c (2,3)] <- ciCbDat[[1]]
+  bstVars[indW,2] <- ciCbDat[[2]]
 }
-estDb
-estSb
+DbArr
+SbArr
+CbArr
+# create tibble with data
+ciTib <- bind_rows(
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "db",
+    estim = DbArr[,1],
+    lower = DbArr[,2],
+    upper = DbArr[,3]
+  ), 
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "cb",
+    estim = CbArr[,1],
+    lower = CbArr[,2],
+    upper = CbArr[,3]
+  ),
+  tibble(
+    year = seq(1,nY - winSize + 1),
+    type = "sb",
+    estim = SbArr[,1],
+    lower = SbArr[,2],
+    upper = SbArr[,3]
+  )
+  
+)
+ciTib %>% mutate(
+  width = upper - lower
+) %>% View()
+ciTib %>% mutate(
+  width = upper - lower) %>% group_by(type) %>% summarise(avgWidth = median(width))
+#plotting of confidence intervals
+
+ciTibPlt <- ciTib
+ciTibPlt <- ciTibPlt %>% filter(type != "sb")
+
+ciTibPlt %>% ggplot(aes(x = year))+
+  geom_line(aes(x = year, y = estim), col = "black")+
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4, linewidth = 0.4)+
+  facet_wrap(vars(type))
+
