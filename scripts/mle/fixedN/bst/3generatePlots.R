@@ -65,7 +65,7 @@ bstFreVarTibPl$char <- factor(bstFreVarTibPl$char,
                                      parse(text = TeX("$\\sigma^2_{db}$"))
                           ))
 ##plots----
-textSize <- 17
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -144,7 +144,7 @@ bstVarPlotMain
 if(FALSE){
   ggsave(bstVarPlotMain, path = here("results/"), 
          filename = "plotFreFixNVarEstMain.pdf", device = "pdf",
-         width = 10, height = 11, 
+         width = 10, height = 10, 
   )
 }
 

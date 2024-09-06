@@ -83,18 +83,21 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
                    legend.text = element_text(size = textSize))
 ###plotting----
 relTimePlot <-
-benchTibRelMle  %>% 
+benchTibRelMle  %>% mutate(n = m*r) %>% 
   filter(!expr %in% c("k2No", "k3No"), m >= 40) %>% 
-  ggplot(aes(x = m, y = relTime, col = expr))+ 
+  ggplot(aes(x = n, y = relTime, col = expr))+ 
   geom_line(linewidth = 1.1)+
   geom_hline(yintercept = 1, col = "#00BFC4", linetype = "longdash")+
   facet_wrap(~B, ncol = 4)+
-  labs(x = "Effective sample size",
+  labsPlot+
+  labs(x = "Total sample size n",
        title = "Relative runtimes for Fréchet MLE", 
        y = "Relative time")+
-  labsPlot+
   themePlot+
   scale_color_manual(values = ownPalette)+
+  scale_x_continuous(
+    breaks = c(4000, 6000, 8000)
+  )+
   theme( 
     axis.text.x = element_text(angle = 90, hjust = 1),
     legend.position = "right",
@@ -104,7 +107,7 @@ relTimePlot
 if(F){
 ggsave(relTimePlot, path = here("results/"), 
        filename = "plotrelTimePlotMleRFix.pdf", device = "pdf",
-       width = 9, height = 6, 
+       width = 10, height = 5, 
 )
 }
 

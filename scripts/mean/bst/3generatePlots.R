@@ -27,8 +27,9 @@ bstPlotTibDb <- bstMeanVarTib %>% filter(k == 1) %>%
 bstPlotTib <- bind_rows(bstPlotTib, bstPlotTibDb)
 #create factors and plot----
 ##themes----
-textSize <- 18
-themePlot <- theme(strip.background = element_rect(color = "black", 
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
                    axis.title.x = element_text(size = textSize),
                    axis.title.y = element_text(size = textSize),
@@ -42,7 +43,6 @@ themePlot <- theme(strip.background = element_rect(color = "black",
                    legend.position = "right",
                    legend.title = element_text(size = textSize),
                    legend.text = element_text(size = textSize))
-  
 
 labsPlot <- labs(
   x = "Effective sample size m",
@@ -127,7 +127,7 @@ plotMeanFixRVarEst
 if(FALSE){
   ggsave(plotMeanFixRVarEst, path = here("results/"), 
          filename = "plotMeanFixRVarEstMain.pdf", device = "pdf",
-         width = 10, height = 12
+         width = 10, height = 10 #urspr 10, 12
   )
 }
 #depcrecated start

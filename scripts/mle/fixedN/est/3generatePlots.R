@@ -134,7 +134,7 @@ ggsave(combPlot, path = here("results/"),
 }
 
 #now plot for the paper
-textSize <- 20
+textSize <- 17
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -174,6 +174,6 @@ msePlotMain
 if(FALSE){
   ggsave(msePlotMain, path = here("results/"), 
          filename = "plotFreFixNMseMain.pdf", device = "pdf",
-         width = 10, height = 11, 
+         width = 10, height = 6, 
   )
 }

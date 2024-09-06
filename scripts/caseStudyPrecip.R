@@ -14,9 +14,15 @@ source(here("src/theme.R"))
 
 #download precipitation data (location: Aachen, Germany) and read it
 ##link leads to an zip-archive
-downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_00003_18910101_20110331_hist.zip"
+# Aachen: downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_00003_18910101_20110331_hist.zip"
+downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_01078_19520101_20231231_hist.zip"
+downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_01358_18900801_20231231_hist.zip"
+downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_02290_17810101_20231231_hist.zip"#Hohenpeißenberg
 download.file(downLink, "data.zip")
-fileName <- "produkt_klima_tag_18910101_20110331_00003.txt"
+# Aachen name: fileName <- "produkt_klima_tag_18910101_20110331_00003.txt" #Aachen
+fileName <- "produkt_klima_tag_19520101_20231231_01078.txt" #Ddorf
+fileName <- "produkt_klima_tag_18900801_20231231_01358.txt" # Fichterlberg
+fileName <- "produkt_klima_tag_17810101_20231231_02290.txt" #Hohenpeißenberg
 dataRaw <- unz("data.zip", fileName) %>% read_delim(delim=";", trim_ws = T)
 ##delete the downloaded file
 file.remove("data.zip")
@@ -36,7 +42,8 @@ data
 data %>% na.omit()
 data %>% ggplot(aes(x = day, y = RSK))+
   geom_line()
-data %>% filter(as.double(format(day, "%Y")) == 1927)
+#data %>% filter(as.double(format(day, "%Y")) == 1927)
+data <- data %>% filter(RSK >= 0) #starts at 1969
 gapVec <- numeric(length(data$day))
 for(ind in seq(1, gapVec %>% length())){
   #immer jahre reinpacken und dann table erstellen
@@ -44,12 +51,11 @@ for(ind in seq(1, gapVec %>% length())){
 }
 gapVec %>% table() #no observations from 1914 to 1930
 rm(gapVec, ind)
-data <- data %>% filter(as.double(format(day, "%Y")) >=1930)
+#data <- data %>% filter(as.double(format(day, "%Y")) >=1930)
 data %>% ggplot(aes(x = day, y = RSK))+
   geom_line()
-data %>% filter(RSK < 0) #false data in 1945
-data <- data %>% filter(as.double(format(day, "%Y")) >=1946) %>% 
-  mutate(year = as.double(format(day, "%Y")))
+#data <- data %>% filter(as.double(format(day, "%Y")) >=1946) %>% 
+data <- data %>%  mutate(year = as.double(format(day, "%Y")))
 data %>% ggplot(aes(x = day, y = RSK))+
   geom_line()
 # data <- data %>% bind_rows(
@@ -108,21 +114,21 @@ for(indW in seq(1, nY - winSize + 1)){
 # create tibble with data
 ciTib <- bind_rows(
   tibble(
-    year = seq(1,nY - winSize + 1),
+    year = yearVec[seq(1,nY - winSize + 1)],
     type = "db",
     estim = DbArr[,1],
     lower = DbArr[,2],
     upper = DbArr[,3]
   ), 
   tibble(
-    year = seq(1,nY - winSize + 1),
+    year = yearVec[seq(1,nY - winSize + 1)],
     type = "cb",
     estim = CbArr[,1],
     lower = CbArr[,2],
     upper = CbArr[,3]
   ),
   tibble(
-    year = seq(1,nY - winSize + 1),
+    year = yearVec[seq(1,nY - winSize + 1)],
     type = "sb",
     estim = SbArr[,1],
     lower = SbArr[,2],
@@ -143,12 +149,167 @@ avgWidths[2]/avgWidths[1]
 
 ciTibPlt <- ciTib
 ciTibPlt <- ciTibPlt %>% filter(type != "sb")
+ciTibPlt$type <- 
+  factor(ciTibPlt$type, levels = c("db", "cb"))
+ciTibPlt <- 
+  ciTibPlt %>% mutate(width = upper - lower, year = year - 40)
+ciTibPlt$type <- 
+  ciTibPlt$type %>% factor(
+    levels = c("cb", "db"),
+    labels = c("cb" = "cb(2)", "db" = "db")
+  )
+ciTibPlt
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+ownPalette <- #based on dark2
+  c("cb(2)" = "#F8766D",  
+    "cb(3)" = "#7CAE00",  
+    "db" = "#00BFC4",  
+    "sb" = "#C77CFF")
 
-ciTibPlt %>% ggplot(aes(x = year))+
-  geom_line(aes(x = year, y = estim), col = "black")+
-  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4, linewidth = 0.4)+
-  facet_wrap(vars(type))
 
+yearBounds <- 
+  (ciTibPlt$year)[c(1, nY - winSize + 1)]
+ciPlot <- 
+  ciTibPlt %>% mutate(width = upper - lower) %>% 
+  ggplot(aes(x = year))+
+  geom_line(
+    data = tibble(
+      x = seq(yearBounds[1], yearBounds[2]),
+      y = precDb[seq(1, yearBounds[2] - yearBounds[1] +1)]
+    ),
+    aes(x = x, y = (y - min(precDb))/5), col = "darkblue"
+  )+
+  geom_line(
+    data = ciTibPlt,
+    aes(x = year, y = estim), col = "black")+
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4,
+              linewidth = 0.1, col = "red")+
+  facet_wrap(vars(type))+
+  scale_y_continuous(limits = c(0,70))+
+  scale_x_continuous(
+    breaks = 
+      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
+                                  length.out = 4) %>% 
+      round()
+    )+
+  scale_color_manual(
+    values = ownPalette
+  )+
+  #facet_wrap(vars(ciType), 
+  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in",
+    y = paste0("Rainfall heigth"),
+    x = "Year"
+  )
+
+#new main:
+twoYeaAvgs <- 
+  array(dim = c(length(ciTibPlt$upper)/2, 2))
+for(indY in seq(1, length(ciTibPlt$upper)/2)){
+  twoYeaAvgs[indY,1] <- 
+    ciTibPlt$lower[c(indY, indY+1)] %>% mean()
+  twoYeaAvgs[indY,2] <- 
+    ciTibPlt$upper[c(indY, indY+1)] %>% mean()
+}
+
+twoYeaAvgs <-
+
+ciPlot <- 
+  ciTibPlt %>% 
+  ggplot(aes(x = year))+
+  geom_line(
+    data = tibble(
+      x = seq(yearBounds[1], yearBounds[2])+40,
+      y = precDb[seq(1, yearBounds[2] - yearBounds[1] +1)]
+    ),
+    aes(x = x, y = (y - min(precDb))/5), col = "black"
+  )+
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
+              linewidth = 0.1, col = "red")+
+  geom_line(
+    data = ciTibPlt,
+    aes(x = year, y = estim, col = type), linewidth = 1)+
+  scale_y_continuous(limits = c(0,70))+
+  scale_x_continuous(
+    breaks = 
+      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
+          length.out = 4) %>% 
+      round()
+  )+
+  scale_color_manual(
+    values = ownPalette
+  )+
+  #facet_wrap(vars(ciType), 
+  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in",
+    y = paste0("Precipitation"),
+    x = "Year",
+    col = "Bootstrap:",
+    fill = "Bootstrap:"
+  )
+ciPlot
+
+
+#explore begin
+ciTibPlt %>% mutate(width = upper - lower, year = year + 40) %>% 
+  ggplot(aes(x = year, y = width, col = type))+
+  geom_line()+
+  scale_x_continuous(
+    breaks = 
+      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
+          length.out = 4) %>% 
+      round()) + 40
+  )+
+  #facet_wrap(vars(ciType), 
+  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in ",
+    y = paste0("CI Width"),
+    x = "Year"
+  )
+
+
+#explore end
+
+
+if(F){
+  ggsave(plot = ciPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 4)
+}
+
+#DEPRECATED
 #analysis for the estimation of Prob(M_r <= threshold)
 ##threshold for a yearly Maximum will be set as the empirical median of the DB maxima
 thresh <- precDb %>% quantile(0.5) %>% unname()
@@ -218,8 +379,9 @@ ciTib <- bind_rows(
 ciTib %>% mutate(
   width = upper - lower
 ) %>% View()
-ciTib %>% mutate(
+ciTib <- ciTib %>% mutate(
   width = upper - lower) %>% group_by(type) %>% summarise(avgWidth = median(width))
+
 #plotting of confidence intervals
 
 ciTibPlt <- ciTib

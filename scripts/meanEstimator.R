@@ -23,6 +23,22 @@ library(tidyverse) #tidyverse package suite for data manipulation
 # Description: code for the formulas and plot
 #______________________________________________________________________________
 source(here("src/theme.R"))#plotting theme
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
 
 # ==== SECTION 3: main script ===========================================
 # Description: code for the formulas and plot
@@ -120,9 +136,10 @@ p_quot <- plt_quot_data %>% ggplot(aes(x = gamma, y = ratio))+
   scale_x_continuous(limits = c(-0.5, 0.5))+
   scale_y_continuous(limits = c(1, 1.17))
 p_quot
+if(F){
 ggsave(p_quot, filename = "plotAsyVarRatioMean.pdf", device = "pdf", 
        path = here("results/"),
-       height = 4, width = 7)
-
+       height = 4, width = 8)
+}
 
 
