@@ -12,10 +12,10 @@ bstMeanVarTib <- bstMeanTib
 bstPlotTib <- bstMeanVarTib
 bstPlotTib <- bstPlotTib %>% 
   left_join(trueVarsTib, by = c("gamma", "tsModel", "marginal", "m", 
-                                       "r", "beta")) %>% 
+                                "r", "beta")) %>% 
   filter(
-  gamma %in% c(-0.2, 0, 0.2), marginal == 1, k != 1, beta %in% c(0,0.5)
-) %>% bind_cols(tibble(char = "sb"))
+    gamma %in% c(-0.2, 0, 0.2), marginal == 1, k != 1, beta %in% c(0,0.5)
+  ) %>% bind_cols(tibble(char = "sb"))
 ## for disjoint blocks----
 load(here("scripts/mean/bst/generateTrueVars/data/trueVarsTibDb"))#db true vars
 bstPlotTibDb <- bstMeanVarTib %>% filter(k == 1) %>% 
@@ -49,11 +49,11 @@ labsPlot <- labs(
   col = "Bootstrap:")
 ##factors----
 bstPlotTib$k <- factor(bstPlotTib$k, levels = c(0,2,3,1),
-                           labels = c(parse(text = TeX("sb")), 
-                                      parse(text = TeX("cb(2)")), 
-                                      parse(text = TeX("cb(3)")), 
-                                      parse(text = TeX("db"))
-                           )
+                       labels = c(parse(text = TeX("sb")), 
+                                  parse(text = TeX("cb(2)")), 
+                                  parse(text = TeX("cb(3)")), 
+                                  parse(text = TeX("db"))
+                       )
 )
 ownPalette <- #based on dark2
   c("cb(2)" = "#F8766D",  
@@ -62,32 +62,32 @@ ownPalette <- #based on dark2
     "sb" = "#C77CFF")
 
 bstPlotTib$marginal <- factor(bstPlotTib$marginal,
-                                  levels = c(1,5),
-                                  labels = c("GPD", "GEV")
+                              levels = c(1,5),
+                              labels = c("GPD", "GEV")
 )
 
 bstPlotTib$beta <- factor(bstPlotTib$beta, 
-                              levels = c(0, 0.25, 0.5, 0.75),
-                              labels = c(parse(text = TeX("i.i.d.")), 
-                                         parse(text = TeX("ARMAX $0.25$")), 
-                                         parse(text = TeX("ARMAX $0.5$")), 
-                                         parse(text = TeX("ARMAX $0.75$"))
-                              )
+                          levels = c(0, 0.25, 0.5, 0.75),
+                          labels = c(parse(text = TeX("i.i.d.")), 
+                                     parse(text = TeX("ARMAX $0.25$")), 
+                                     parse(text = TeX("ARMAX $0.5$")), 
+                                     parse(text = TeX("ARMAX $0.75$"))
+                          )
 )
 
 bstPlotTib$gamma <- factor(bstPlotTib$gamma, 
-                               levels = c(-0.2, -0.1, 0, 0.1, 0.2), 
-                               labels = c(parse(text = TeX("$\\gamma = -0.2$")),
-                                          parse(text = TeX("$\\gamma = -0.1$")),
-                                          parse(text = TeX("$\\gamma = 0$")),
-                                          parse(text = TeX("$\\gamma = 0.1$")),
-                                          parse(text = TeX("$\\gamma = 0.2$"))
-                                          ))
-bstPlotTib$char <- factor(bstPlotTib$char, 
-                           levels = c("sb", "db"), 
-                           labels = c(parse(text = TeX("$\\sigma^2_{sb}$")),
-                                      parse(text = TeX("$\\sigma^2_{db}$"))
+                           levels = c(-0.2, -0.1, 0, 0.1, 0.2), 
+                           labels = c(parse(text = TeX("$\\gamma = -0.2$")),
+                                      parse(text = TeX("$\\gamma = -0.1$")),
+                                      parse(text = TeX("$\\gamma = 0$")),
+                                      parse(text = TeX("$\\gamma = 0.1$")),
+                                      parse(text = TeX("$\\gamma = 0.2$"))
                            ))
+bstPlotTib$char <- factor(bstPlotTib$char, 
+                          levels = c("sb", "db"), 
+                          labels = c(parse(text = TeX("$\\sigma^2_{sb}$")),
+                                     parse(text = TeX("$\\sigma^2_{db}$"))
+                          ))
 #bstPlotTibDb <- bstPlotTib %>% filter(k== "db")
 #bstPlotTib <- bstPlotTib %>% filter(k != "db")
 
@@ -98,14 +98,14 @@ dummy_data <- data.frame(
   m = c(NA, 0.2, NA, 0.4),  # Use NA to ensure these points are not visible in the plot
   varBst = c(0.1, NA, 0.3, NA),
   k = factor(c(0,1, 2, 3), levels = c(0,2,3,1),
-    labels = c(parse(text = TeX("sb")), 
-        parse(text = TeX("cb(2)")), 
-        parse(text = TeX("cb(3)")), 
-        parse(text = TeX("db")))
-        )
+             labels = c(parse(text = TeX("sb")), 
+                        parse(text = TeX("cb(2)")), 
+                        parse(text = TeX("cb(3)")), 
+                        parse(text = TeX("db")))
+  )
 )
 plotMeanFixRVarEst <- 
-bstPlotTib %>% ggplot(aes(x = m, y = varBst*rescale, col = k))+
+  bstPlotTib %>% ggplot(aes(x = m, y = varBst*rescale, col = k))+
   #geom_line(data = dummy_data, 
   #          aes(x = m, y = varBst, col = k))+
   geom_line(linewidth = 1.1)+ 
@@ -172,7 +172,7 @@ if(FALSE){
 plotRelTib <- bstPlotTib %>% mutate(relVar = varBst / trueVar)
 
 plotMeanFixRVarEstRel <- 
-plotRelTib %>% ggplot(aes(x = m, y = relVar, col = k))+
+  plotRelTib %>% ggplot(aes(x = m, y = relVar, col = k))+
   geom_line(linewidth = 1.1)+ 
   geom_hline(yintercept = 1, col = "black", linetype = "longdash",
              linewidth = 1.1)+
@@ -212,34 +212,34 @@ ciMeanTibRfix <- ciMeanTibRfix %>% filter(
 
 
 ciMeanTibRfix$k <- factor(ciMeanTibRfix$k, levels = c(2,3,0,1),
-                             labels = c(parse(text = TeX("cb(2)")), 
-                                        parse(text = TeX("cb(3)")), 
-                                        parse(text = TeX("sb")),
-                                        parse(text = TeX("db"))
-                             )
+                          labels = c(parse(text = TeX("cb(2)")), 
+                                     parse(text = TeX("cb(3)")), 
+                                     parse(text = TeX("sb")),
+                                     parse(text = TeX("db"))
+                          )
 )
 ciMeanTibRfix$marginal <- factor(ciMeanTibRfix$marginal,
-                                    levels = c(1,5),
-                                    labels = c("GPD", "GEV")
+                                 levels = c(1,5),
+                                 labels = c("GPD", "GEV")
 )
 
 ciMeanTibRfix$beta <- factor(ciMeanTibRfix$beta, 
-                                levels = c(0, 0.25, 0.5, 0.75),
-                                labels = c(parse(text = TeX("i.i.d.")), 
-                                           parse(text = TeX("ARMAX $0.25$")), 
-                                           parse(text = TeX("ARMAX $0.5$")), 
-                                           parse(text = TeX("ARMAX $0.75$"))
-                                )
+                             levels = c(0, 0.25, 0.5, 0.75),
+                             labels = c(parse(text = TeX("i.i.d.")), 
+                                        parse(text = TeX("ARMAX $0.25$")), 
+                                        parse(text = TeX("ARMAX $0.5$")), 
+                                        parse(text = TeX("ARMAX $0.75$"))
+                             )
 )
 
 ciMeanTibRfix$gamma <- factor(ciMeanTibRfix$gamma, 
-                                 levels = c(0-0.2, -0.1, 0, 0.1, 0.2), 
-                                 labels = c(parse(text = TeX("$\\gamma = -0.2$")),
-                                            parse(text = TeX("$\\gamma = -0.1$")),
-                                            parse(text = TeX("$\\gamma = 0$")),
-                                            parse(text = TeX("$\\gamma = 0.1$")),
-                                            parse(text = TeX("$\\gamma = 0.2$"))
-                                            )
+                              levels = c(0-0.2, -0.1, 0, 0.1, 0.2), 
+                              labels = c(parse(text = TeX("$\\gamma = -0.2$")),
+                                         parse(text = TeX("$\\gamma = -0.1$")),
+                                         parse(text = TeX("$\\gamma = 0$")),
+                                         parse(text = TeX("$\\gamma = 0.1$")),
+                                         parse(text = TeX("$\\gamma = 0.2$"))
+                              )
 )
 ##plots----
 ciCovPlot <- 

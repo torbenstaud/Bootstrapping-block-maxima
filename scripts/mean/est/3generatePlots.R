@@ -20,8 +20,8 @@ fullVarTibMeanEst$beta <- fullVarTibMeanEst$beta %>% factor(
              parse(text = TeX("ARMAX $0.5$")))
 )
 fullVarTibMeanEst$marginal <- factor(fullVarTibMeanEst$marginal,
-                              levels = c(1,5),
-                              labels = c("GPD", "GEV")
+                                     levels = c(1,5),
+                                     labels = c("GPD", "GEV")
 )
 
 fullVarTibMeanEst$k <- fullVarTibMeanEst$k %>% factor(
@@ -66,7 +66,7 @@ labsPlot <- labs(title = "Mean estimation (r = 90 fixed)",
 
 
 plotAbsMse <- 
-fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
+  fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
   pivot_longer(cols = c("biasEst", "varEst", "mse", "biasSq"),
                names_to = "char", values_to = "val") %>% 
   filter(char == "mse") %>% 
@@ -126,7 +126,7 @@ plotRelMse <-
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 plotRelMse
 plotAbsRelMse <- ggarrange(plotAbsMse, plotRelMse, align = "v", ncol = 1,
-                            common.legend = T, legend = "right",
+                           common.legend = T, legend = "right",
                            heights = c(1, 1.15))
 plotAbsRelMse
 

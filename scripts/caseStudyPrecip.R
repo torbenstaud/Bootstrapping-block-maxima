@@ -262,8 +262,9 @@ ciPlot
 
 
 #explore begin
+ciTibPlt <- ciTibPlt %>% mutate(width = upper - lower) 
 ciWidthPlt <- 
-ciTibPlt %>% mutate(width = upper - lower) %>% 
+ciTibPlt %>% 
   ggplot(aes(x = year, y = width, col = type))+
   geom_line()+
   scale_x_continuous(
@@ -279,19 +280,64 @@ ciTibPlt %>% mutate(width = upper - lower) %>%
   )+
   labs(
     title = "Precipitation heigth in ",
-    y = paste0("CI Width"),
+    y = paste0("CI width"),
     x = "Year"
   )
-
 ciWidthPlt
+
+relCiTib <- ciTibPlt %>% filter(type == "cb(2)") %>% bind_cols(
+  tibble( dbWidth = (ciTibPlt %>% filter(type == "db"))$width)
+) %>% mutate(relWidth = dbWidth/width) %>% 
+  select(c(year, relWidth))
+relCiTib
+
+ciRelWidthPlt <- 
+  relCiTib %>% 
+  ggplot(aes(x = year, y = relWidth))+
+  geom_line(col = "#F8766D")+
+  scale_x_continuous(
+    breaks = 
+      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+           length.out = 4) %>% 
+         round()) 
+  )+
+  scale_y_continuous(
+    limits = c(1, 1.4)
+  )+
+  geom_hline(
+    yintercept = 1, linetype = "longdash", col = "#00BFC4"
+  )+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in ",
+    y = paste0("Relative CI width"),
+    x = "Year"
+  )
+ciRelWidthPlt
+
+
 fullCiPlot <- 
   ggarrange(
      ciPlot, ciWidthPlt, common.legend = T, legend = "right"
   )
 fullCiPlot
+
+fullCiPlot2 <- 
+  ggarrange(
+    ciPlot, ciRelWidthPlt, common.legend = T, legend = "right"
+  )
+fullCiPlot2
 #explore end
 if(F){
   ggsave(plot = fullCiPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 5) #ursprl 4
+}
+if(F){
+  ggsave(plot = fullCiPlot2, filename = here("results/plotCaseStudyCbandsRel.pdf"),
          device = "pdf", width = 10, height = 5) #ursprl 4
 }
 

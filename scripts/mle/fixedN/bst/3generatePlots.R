@@ -60,10 +60,10 @@ bstFreVarTibPl$alpha <- factor(bstFreVarTibPl$alpha,
                                           parse(text = TeX("$\\alpha_0 = 1.5$")))
 )
 bstFreVarTibPl$char <- factor(bstFreVarTibPl$char, 
-                          levels = c("sb", "db"), 
-                          labels = c(parse(text = TeX("$\\sigma^2_{sb}$")),
-                                     parse(text = TeX("$\\sigma^2_{db}$"))
-                          ))
+                              levels = c("sb", "db"), 
+                              labels = c(parse(text = TeX("$\\sigma^2_{sb}$")),
+                                         parse(text = TeX("$\\sigma^2_{db}$"))
+                              ))
 ##plots----
 textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
@@ -87,7 +87,7 @@ labsPlot <- labs(
 rescale <- 100
 
 bstVarPlot <- 
-bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
+  bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
   filter(alpha != 2) %>% 
   ggplot()+
   geom_line(aes(x = m, y = varBst*rescale, col = k),
@@ -102,7 +102,7 @@ bstFreVarTibPl %>% mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>%
   scale_color_manual(values = ownPalette)+
   theme(
     axis.text.x = element_text(angle = 90),
-    legend.position = "right",
+    legend.position = "bottom",
     plot.title = element_blank()
   )+
   scale_x_continuous(
@@ -112,7 +112,7 @@ bstVarPlot
 if(FALSE){
   ggsave(bstVarPlot, path = here("results/"), 
          filename = "plotFreFixNVarEstSupp.pdf", device = "pdf",
-         width = 10, height = 11, 
+         width = 15, height = 10, 
   )
 }
 #now for the main paper: no Fréchet marginals-----
@@ -153,9 +153,24 @@ if(FALSE){
 #Confidence Intervals----
 load(here("scripts/mle/fixedN/bst/data/CiFreNfix"))
 ciFreTibNfix
-#create tibbles----
-
-#create factors----
+##sizes----
+textSize <- 15
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+##create factors----
 ciFreTibNFixPlot <- ciFreTibNfix %>% filter(
   beta %in% c(0, 0.5), 
   m >=25, m<=83
@@ -166,7 +181,7 @@ ciFreTibNFixPlot <- ciFreTibNfix %>% filter(
 
 ciFreTibNFixPlot$k <- factor(ciFreTibNFixPlot$k, levels = c(0,2,3,1),
                              labels = c(parse(text = TeX("sb")),
-                                parse(text = TeX("cb(2)")), 
+                                        parse(text = TeX("cb(2)")), 
                                         parse(text = TeX("cb(3)")), 
                                         parse(text = TeX("db"))
                              )
@@ -200,7 +215,7 @@ ciCovPlot <-
             linewidth = 1.1)+
   geom_hline(yintercept = 0.95, col = "black", linetype = "dashed",
              linewidth = 1.1)+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Empirical coverage"),
         title = "Confidence intervals for the shape")+
@@ -211,7 +226,7 @@ ciCovPlot <-
         axis.title.x = element_blank(),
         plot.title = element_blank(),
         legend.position = "right"
-        )+
+  )+
   scale_y_continuous(
     breaks = c(0.85, 0.9, 0.95)
   )
@@ -224,7 +239,7 @@ ciWidthPlot <-
   ggplot()+
   geom_line(aes(x = m, y = avgWidth, col = k),
             linewidth = 1.1)+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Width"),
         title = "Average width of confidence intervals")+
@@ -246,11 +261,11 @@ ciWidthRelPlot <- ciWidthRel %>% filter( m != 31) %>%
             linewidth = 1.1)+
   geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
              linewidth = 1.1)+
-  facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
+  facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Relative average width"),
         title = "Average relative width of confidence intervals",
-        )+
+  )+
   scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
