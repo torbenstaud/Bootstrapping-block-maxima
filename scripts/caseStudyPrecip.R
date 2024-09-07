@@ -134,7 +134,8 @@ ciTib <- bind_rows(
     lower = SbArr[,2],
     upper = SbArr[,3]
   )
-  
+) %>% mutate(
+  year = year + 40
 )
 ciTib %>% mutate(
   width = upper - lower
@@ -145,14 +146,40 @@ avgWidths <- (ciTib %>% mutate(
   summarise(avgWidth = median(width)) %>% 
   filter(type != "sb") %>% select(avgWidth))[[1]]
 avgWidths[2]/avgWidths[1]
+##averaging of two year window
+twoYeaAvgs <- 
+  array(dim = c(length(ciTibPlt$upper)/2, 2))
+tmpTib <- tibble()
+for(indT in seq(1,3)){
+  indTT <- (ciTib$type %>% unique())[indT]
+  updTib <- 
+    (ciTib %>% filter(type == indTT))[,c(3,4,5)] %>% 
+    apply(c(2), function(xx){stats::filter(xx, filter = c(1/2,1/2), sides = 1)}) %>% 
+    as_tibble()
+  updTib <- bind_cols(
+    (ciTib %>% filter(type == indTT))[, c(1,2)],
+    updTib
+  )
+  tmpTib <- tmpTib %>% bind_rows(updTib)
+}
+avgCiTib <- tmpTib %>% filter(year != 1919)
+rm(tmpTib)
+
+
+
 #plotting of confidence intervals
 
-ciTibPlt <- ciTib
+ciTibPlt <- avgCiTib
+##cb estim substituted by sb estimator
+ciTibPlt <- ciTibPlt %>%  bind_cols(
+  sbEstim = rep((ciTibPlt %>% filter(type == "sb"))$estim, 3)
+) %>% mutate(
+  estim = ifelse(type == "cb", sbEstim, estim)
+) %>% select(-c(sbEstim))
+
 ciTibPlt <- ciTibPlt %>% filter(type != "sb")
 ciTibPlt$type <- 
   factor(ciTibPlt$type, levels = c("db", "cb"))
-ciTibPlt <- 
-  ciTibPlt %>% mutate(width = upper - lower, year = year - 40)
 ciTibPlt$type <- 
   ciTibPlt$type %>% factor(
     levels = c("cb", "db"),
@@ -183,67 +210,24 @@ ownPalette <- #based on dark2
 
 
 yearBounds <- 
-  (ciTibPlt$year)[c(1, nY - winSize + 1)]
-ciPlot <- 
-  ciTibPlt %>% mutate(width = upper - lower) %>% 
-  ggplot(aes(x = year))+
-  geom_line(
-    data = tibble(
-      x = seq(yearBounds[1], yearBounds[2]),
-      y = precDb[seq(1, yearBounds[2] - yearBounds[1] +1)]
-    ),
-    aes(x = x, y = (y - min(precDb))/5), col = "darkblue"
-  )+
-  geom_line(
-    data = ciTibPlt,
-    aes(x = year, y = estim), col = "black")+
-  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.4,
-              linewidth = 0.1, col = "red")+
-  facet_wrap(vars(type))+
-  scale_y_continuous(limits = c(0,70))+
-  scale_x_continuous(
-    breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
-                                  length.out = 4) %>% 
-      round()
-    )+
-  scale_color_manual(
-    values = ownPalette
-  )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in",
-    y = paste0("Rainfall heigth"),
-    x = "Year"
-  )
+  (ciTibPlt$year)[c(1, nY - winSize)]
+
 
 #new main:
-twoYeaAvgs <- 
-  array(dim = c(length(ciTibPlt$upper)/2, 2))
-for(indY in seq(1, length(ciTibPlt$upper)/2)){
-  twoYeaAvgs[indY,1] <- 
-    ciTibPlt$lower[c(indY, indY+1)] %>% mean()
-  twoYeaAvgs[indY,2] <- 
-    ciTibPlt$upper[c(indY, indY+1)] %>% mean()
-}
 
-twoYeaAvgs <-
+##averaged db block maxima
+avgPrecDb <- (precDb %>% 
+  stats::filter(sides = 1, filter = c(1/2,1/2)))[-1]
 
 ciPlot <- 
   ciTibPlt %>% 
   ggplot(aes(x = year))+
   geom_line(
     data = tibble(
-      x = seq(yearBounds[1], yearBounds[2])+40,
-      y = precDb[seq(1, yearBounds[2] - yearBounds[1] +1)]
+      x = seq(yearBounds[1], yearBounds[2]),
+      y = avgPrecDb[seq(1, yearBounds[2] - yearBounds[1] +1)]
     ),
-    aes(x = x, y = (y - min(precDb))/5), col = "black"
+    aes(x = x, y = (y - min(avgPrecDb))/5), col = "black"
   )+
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
               linewidth = 0.1, col = "red")+
@@ -253,7 +237,7 @@ ciPlot <-
   scale_y_continuous(limits = c(0,70))+
   scale_x_continuous(
     breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
+      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
           length.out = 4) %>% 
       round()
   )+
@@ -278,17 +262,16 @@ ciPlot
 
 
 #explore begin
-ciTibPlt %>% mutate(width = upper - lower, year = year + 40) %>% 
+ciWidthPlt <- 
+ciTibPlt %>% mutate(width = upper - lower) %>% 
   ggplot(aes(x = year, y = width, col = type))+
   geom_line()+
   scale_x_continuous(
     breaks = 
-      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize + 1], 
+      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
           length.out = 4) %>% 
-      round()) + 40
+      round()) 
   )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
   themePlot+
   theme(
     plot.title = element_blank(),
@@ -300,14 +283,19 @@ ciTibPlt %>% mutate(width = upper - lower, year = year + 40) %>%
     x = "Year"
   )
 
-
+ciWidthPlt
+fullCiPlot <- 
+  ggarrange(
+     ciPlot, ciWidthPlt, common.legend = T, legend = "right"
+  )
+fullCiPlot
 #explore end
-
-
 if(F){
-  ggsave(plot = ciPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
-         device = "pdf", width = 10, height = 4)
+  ggsave(plot = fullCiPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 5) #ursprl 4
 }
+
+
 
 #DEPRECATED
 #analysis for the estimation of Prob(M_r <= threshold)
