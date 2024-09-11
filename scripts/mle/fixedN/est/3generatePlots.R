@@ -177,3 +177,34 @@ if(FALSE){
          width = 10, height = 6, 
   )
 }
+#for jrssb
+msePlotMainJrssb <- 
+  varTibMleEstPl %>% filter(marginal == "Pareto") %>% 
+  ggplot(aes(x = m, y = mse*rescale, col = k))+
+  geom_line(linewidth = 1.1)+
+  facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("MSE * ", rescale),
+        title = "MSE of shape estimators")+
+  themePlot+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    legend.position = "right",
+    plot.title = element_blank()
+  )+
+  scale_x_continuous(breaks = c(25,50,75),
+                     limits = c(25,83)
+                     )+
+  scale_y_continuous(
+    breaks = scales::breaks_pretty(n = 2)
+  )+
+  scale_color_manual(values = ownPalette)
+
+msePlotMainJrssb
+
+if(FALSE){
+  ggsave(msePlotMainJrssb, path = here("results/"), 
+         filename = "plotFreFixNMseMainJrssb.pdf", device = "pdf",
+         width = 11, height = 6, 
+  )
+}

@@ -147,7 +147,13 @@ if(FALSE){
          width = 10, height = 10, 
   )
 }
-
+#for jrssb
+if(FALSE){
+  ggsave(bstVarPlotMain, path = here("results/"), 
+         filename = "plotFreFixNVarEstMainJrssb.pdf", device = "pdf",
+         width = 15, height = 10, 
+  )
+}
 
 
 #Confidence Intervals----
@@ -363,5 +369,62 @@ if(FALSE){
   ggsave(combCiPlotMain, path = here("results/"), 
          filename = "plotFreFixNCiMain.pdf", device = "pdf",
          width = 10, height = 10, 
+  )
+}
+#for jrssb
+ciCovPlotMainJrssb <- 
+  ciFreTibNFixPlotMain %>%  filter( m != 31, marginal == "Pareto") %>% 
+  filter(k != "sb") %>% 
+  ggplot()+
+  geom_line(aes(x = m, y = empCov, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 0.95, col = "black", linetype = "dashed",
+             linewidth = 1.1)+
+  facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("Empirical coverage"),
+        title = "Confidence intervals for the shape")+
+  themePlot+
+  scale_color_manual(values = ownPalette)+
+  theme(strip.text.y = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.title = element_blank()
+        )+
+  scale_y_continuous(
+    breaks = c(0.85, 0.9, 0.95)
+  )
+ciCovPlotMainJrssb
+
+
+ciWidthRelPlotMainJrssb <- ciWidthRelMain %>% filter( m != 31) %>% 
+  ggplot()+
+  geom_line(aes(x = m, y = relWidth, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+             linewidth = 1.1)+
+  facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("Relative average width"),
+        title = "Average relative width of confidence intervals",
+  )+
+  scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
+  scale_x_continuous(breaks = c(25, 50, 75))+
+  themePlot+
+  scale_color_manual(values = ownPalette)+
+  theme(plot.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+ciWidthRelPlotMainJrssb
+
+combCiPlotMainJrssb <- 
+  ggarrange(ciCovPlotMainJrssb, ciWidthRelPlotMainJrssb, ncol = 2, align = "h", 
+            common.legend = T, 
+            legend = "bottom")
+combCiPlotMainJrssb
+
+if(FALSE){
+  ggsave(combCiPlotMainJrssb, path = here("results/"), 
+         filename = "plotFreFixNCiMainJrssb.pdf", device = "pdf",
+         width = 13, height = 7
   )
 }

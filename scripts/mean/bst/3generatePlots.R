@@ -27,6 +27,7 @@ bstPlotTibDb <- bstMeanVarTib %>% filter(k == 1) %>%
 bstPlotTib <- bind_rows(bstPlotTib, bstPlotTibDb)
 #create factors and plot----
 ##themes----
+#for jrssb: textSize <- 25
 textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
@@ -127,9 +128,17 @@ plotMeanFixRVarEst
 if(FALSE){
   ggsave(plotMeanFixRVarEst, path = here("results/"), 
          filename = "plotMeanFixRVarEstMain.pdf", device = "pdf",
-         width = 10, height = 10 #urspr 10, 12
+         width = 10, height = 8 #urspr 10, 12
   )
 }
+#for JRSSB
+if(FALSE){
+  ggsave(plotMeanFixRVarEst, path = here("results/"), 
+         filename = "plotMeanFixRVarEstMainJrssb.pdf", device = "pdf",
+         width = 15, height = 9 #urspr 10, 12
+  )
+}
+
 #depcrecated start
 # plotMeanFixRVarEstDb <- 
 #   bstPlotTibDb %>% ggplot(aes(x = m, y = varBst*rescale, col = k))+
@@ -314,5 +323,64 @@ if(FALSE){
   ggsave(combCiPlot, path = here("results/"), 
          filename = "plotMeanFixRCiMain.pdf", device = "pdf",
          width = 10, height = 12
+  )
+}
+
+
+#for jrssb
+ciCovPlotJrssb <- 
+  ciMeanTibRfix %>%   
+  filter(k != "sb", marginal !="GEV") %>% 
+  ggplot()+
+  geom_line(aes(x = m, y = empCov, col = k),
+            linewidth = 1.1)+
+  geom_hline(yintercept = 0.95, col = "black", linetype = "longdash",
+             linewidth = 1.1)+
+  facet_grid(gamma~beta,  labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("Empirical coverage"),
+        title = "Confidence intervals for the mean")+
+  scale_y_continuous(
+    breaks = c(0.91, 0.93, 0.95), limits = c(0.88, 0.955)
+  )+
+  themePlot+
+  scale_color_manual(values = ownPalette)+
+  theme(
+    strip.text.y = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    plot.title = element_blank()
+  )
+ciCovPlotJrssb
+
+
+##now relative width Plot
+ciWidthRelPlotJrssb <- ciWidthRel %>% filter(marginal != "GEV") %>% 
+  ggplot()+
+  geom_line(aes(x = m, y = relWidth, col = k), linewidth = 1.1)+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "longdash",
+             linewidth = 1.1)+
+  facet_grid(gamma~beta, scales = "free_y", labeller = label_parsed)+
+  labsPlot+
+  labs( y = paste0("Relative average width"),
+        title = "Average relative width of confidence intervals",
+  )+
+  scale_y_continuous(limits = c(1, 1.1), breaks = c(1,1.05, 1.1))+
+  themePlot+
+  scale_color_manual(values = ownPalette)+
+  theme(plot.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+ciWidthRelPlotJrssb
+
+combCiPlotJrssb <- 
+  ggarrange(ciCovPlotJrssb, ciWidthRelPlotJrssb, ncol = 2, align = "h", 
+            common.legend = T, legend = "bottom",
+            heights = c(1, 1.15))
+combCiPlotJrssb
+
+if(FALSE){
+  ggsave(combCiPlotJrssb, path = here("results/"), 
+         filename = "plotMeanFixRCiMainJrssb.pdf", device = "pdf",
+         width = 13, height = 7
   )
 }

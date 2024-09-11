@@ -135,6 +135,53 @@ if(FALSE){
          device = "pdf", path = here("results/"),
          width = 10, height = 12)
 }
+#for JRSSB
+plotAbsMseJrssb <- 
+  fullVarTibMeanEst %>% mutate(biasSq = biasEst^2) %>% 
+  pivot_longer(cols = c("biasEst", "varEst", "mse", "biasSq"),
+               names_to = "char", values_to = "val") %>% 
+  filter(char == "mse") %>% 
+  mutate(val = val * 10^2) %>% 
+  ggplot(aes(x = m, y = val, col = k, linetype = char))+
+  geom_line(linewidth = 1.1)+
+  facet_grid(gamma~beta, scales = "free_y", labeller=label_parsed)+
+  labsPlot + 
+  labs(y = "MSE * 100")+
+  themePlot+
+  scale_color_manual(values = ownPalette)+
+  guides(linetype = "none")+
+  theme(plot.title = element_blank(),
+        strip.text.y = element_blank(),
+        axis.ticks.y = element_blank(), 
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+plotAbsMseJrssb
+
+plotRelMseJrssb <- 
+  fullVarTibMeanEstRel %>% 
+  filter(tsMod != 10) %>% 
+  ggplot(aes(x = m, y = ratioMSE, col = k))+
+  geom_line(linewidth = 1.1)+
+  facet_grid(gamma~beta, labeller = label_parsed)+
+  labs( y = "Relative MSE")+
+  ylim(1, 1.15)+
+  scale_y_continuous(breaks = c(1, 1.05, 1.1))+
+  labsPlot+
+  geom_hline(yintercept = 1, color = "#00BFC4", linetype = "longdash",
+             linewidth = 1.1)+
+  themePlot+
+  theme()+
+  scale_color_manual(values = ownPalette)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        plot.title = element_blank())
+plotRelMseJrssb
+plotAbsRelMseJrssb <- ggarrange(plotAbsMseJrssb, plotRelMseJrssb, align = "h", ncol = 2,
+                           common.legend = T, legend = "bottom")
+plotAbsRelMseJrssb
+if(FALSE){
+  ggsave(plotAbsRelMseJrssb, filename = "plotMeanAbsRelMseJrssb.pdf",
+         device = "pdf", path = here("results/"),
+         width = 13, height = 7)
+}
 
 # bias
 plotRelMse2 <- 

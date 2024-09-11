@@ -46,7 +46,6 @@ data %>% ggplot(aes(x = day, y = RSK))+
 data <- data %>% filter(RSK >= 0) #starts at 1969
 gapVec <- numeric(length(data$day))
 for(ind in seq(1, gapVec %>% length())){
-  #immer jahre reinpacken und dann table erstellen
   gapVec[ind] <- as.double(format(data$day[ind], "%Y"))
 }
 gapVec %>% table() #no observations from 1914 to 1930
@@ -341,6 +340,91 @@ if(F){
          device = "pdf", width = 10, height = 5) #ursprl 4
 }
 
+#Jrssb
+
+textSize <- 15
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey", size = 0.2),
+                   axis.title.x = element_text(size = textSize),
+                   axis.title.y = element_text(size = textSize),
+                   axis.text.y =element_text(size=textSize), 
+                   axis.text.x =element_text(size=textSize),
+                   strip.text.x = element_text(size = textSize),
+                   strip.text.y = element_text(size = textSize),
+                   plot.title = element_text(hjust = 0.5, size = textSize, 
+                                             face = "bold"), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = textSize),
+                   legend.text = element_text(size = textSize))
+
+ciPlotJrssb <- 
+  ciTibPlt %>% 
+  ggplot(aes(x = year))+
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type, col = type), alpha = 0.4,
+              linewidth = 0.5)+
+  geom_line(
+    data = ciTibPlt,
+    aes(x = year, y = estim, col = type), linewidth = 1)+
+  scale_y_continuous(limits = c(0,70))+
+  scale_x_continuous(
+    breaks = 
+      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+          length.out = 4) %>% 
+      round()
+  )+
+  scale_color_manual(
+    values = ownPalette
+  )+
+  #facet_wrap(vars(ciType), 
+  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in",
+    y = paste0("Precipitation"),
+    x = "Year",
+    col = "Bootstrap:",
+    fill = "Bootstrap:"
+  )
+ciPlotJrssb
+
+ciWidthPltJrssb <- 
+  ciTibPlt %>% 
+  ggplot(aes(x = year, y = width, col = type))+
+  geom_line()+
+  scale_x_continuous(
+    breaks = 
+      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+           length.out = 4) %>% 
+         round()) 
+  )+
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  labs(
+    title = "Precipitation heigth in ",
+    y = paste0("CI width"),
+    x = "Year"
+  )
+ciWidthPltJrssb
+
+fullCiPlotJrssb <- 
+  ggarrange(
+    ciPlotJrssb, ciWidthPltJrssb, common.legend = T, legend = "right"
+  )
+fullCiPlotJrssb
+if(F){
+  ggsave(plot = fullCiPlotJrssb, 
+         filename = here("results/plotCaseStudyCbandsMainJrssb.pdf"),
+         device = "pdf", width = 11, height = 5) #ursprl 4
+}
 
 
 #DEPRECATED
