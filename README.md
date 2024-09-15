@@ -1,6 +1,6 @@
 # Bootstrapping-Estimators-based-on-the-Block-Maxima-Method
 
-This repository contains the code used to generate the simulation and case studies of the paper: Bücher, Staud (2024): Bootstrapping Estimators based on the Block Maxima Method.
+This repository contains the code used to reproduce simulation study results and case study findings of the paper: Bücher, Staud (2024): Bootstrapping Estimators based on the Block Maxima Method.
 
 **Attention: The scripts are mostly not standalone as a High Performance Cluster was used!**
 
