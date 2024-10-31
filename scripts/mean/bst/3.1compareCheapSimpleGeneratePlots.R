@@ -318,7 +318,7 @@ for (loopB in BVec){
     scale_color_manual(values = ownPalette)+
     theme(strip.text.x = element_blank(), plot.title = element_blank(),
           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-  ciWidthPlot
+  #ciWidthPlot
   
   combCiPlot <- 
     ggarrange(ciCovPlot, ciWidthPlot, nrow = 2, align = "v", common.legend = T, 
