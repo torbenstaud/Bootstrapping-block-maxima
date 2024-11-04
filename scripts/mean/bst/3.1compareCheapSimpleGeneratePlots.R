@@ -257,13 +257,8 @@ dev.off()
 
 
 
-# as for B != 1 the performance of the Cheap BST is bad we only compare with 
-# simple confidence intervals from our paper
+# we make a direct comparison between simple bootstrap CIs and cheap bootstrap CIs
 
-# import the ci tibble for the simple CIs, create new col declaring if 
-# the bstr_type of CI is "simple" or "cheap", filter only B == 1 in the Cheap tibble
-# (as for B != 1 performance is bad), remove the col B, and bind_rows.
-# Finally: plot with linetype = bstr_type
 
 ciMeanTibRfix <- 
   ciMeanTibRfix %>% bind_cols(tibble(bstr_type = "simple"))
