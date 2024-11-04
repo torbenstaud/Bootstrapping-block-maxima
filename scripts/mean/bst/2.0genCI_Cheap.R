@@ -62,8 +62,8 @@ for(gammaInd in seq_along(gammaVec)){
         meanArrayEst <- meanArray
         rm(meanArray)
         t0 <- Sys.time()
-        #calculation of true mean is the more expensive than the following loop
         trueMean <- getTruthC(r, distr, ts_mod, gamma, 10^6, beta)
+        
         for(mInd in seq_along(mVec)){
           m <- mVec[mInd]
           #load the bootstrap array: name estArray: dim[N,k,B]
@@ -79,7 +79,7 @@ for(gammaInd in seq_along(gammaVec)){
           for (B in BVec){
             #only size B subarray for cheap bootstrap
             tmpFullArray <- array(dim = c(N, length(kVec), B +1))
-            tmpFullArray[,,seq(2,B+1)] <- meanArrayBst[,,B] 
+            tmpFullArray[,,seq(2,B+1)] <- meanArrayBst[,,seq(1, B)] 
             tmpFullArray[,,1] <- meanArrayEst[,mInd,]
             updTib <- tibble(
               gamma = gamma, tsModel = ts_mod, marginal = distr,

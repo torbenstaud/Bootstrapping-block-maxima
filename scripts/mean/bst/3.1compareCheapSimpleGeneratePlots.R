@@ -233,7 +233,7 @@ for(loopB in BVec){
     geom_line(aes(x = m, y = relWidth, col = k), linewidth = 1.1)+
     geom_hline(yintercept = 1, col = "#00BFC4", linetype = "longdash",
                linewidth = 1.1)+
-    facet_grid(gamma~marginal+beta, scales = "free_y", labeller = label_parsed)+
+    facet_grid(gamma~marginal+beta, scales = "fixed", labeller = label_parsed)+
     labsPlot+
     labs( y = paste0("Relative average width"),
           title = "Average relative width of confidence intervals",
