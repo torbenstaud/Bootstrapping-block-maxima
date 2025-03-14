@@ -5,6 +5,28 @@ library(tidyr)
 library(ggplot2)
 require(latex2exp)#for writing latex tau in the facets
 library(ggpubr)
+##plotting cosmetics
+scaleFactor <- 1
+textSize <- 20
+themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
+                   strip.background = element_rect(color = "black", 
+                                                   fill = "lightgrey"),
+                   axis.title.x = element_text(size = scaleFactor*textSize, 
+                                               face = "plain"),
+                   axis.title.y = element_text(size = scaleFactor*textSize, 
+                                               face = "plain"),
+                   axis.text.y =element_text(size = scaleFactor*textSize), 
+                   axis.text.x =element_text(size = scaleFactor*textSize),
+                   strip.text.x = element_text(size = scaleFactor*textSize),
+                   strip.text.y = element_text(size = scaleFactor*textSize),
+                   plot.title = element_text(hjust = 0.5, size = scaleFactor*textSize), 
+                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+                   legend.position = "right",
+                   legend.title = element_text(size = scaleFactor*textSize),
+                   legend.text = element_text(size = scaleFactor*textSize))
+
+
+
 #create QQ-Plots----
 ## source files: MACOS
 
@@ -96,8 +118,9 @@ tib_fullErr %>%
   scale_fill_manual(labels = c("Bootstrap", "Estimation"), values = c("#F8766D", "#00BFC4"))+
   scale_linetype_manual(labels = c("Bootstrap", "Estimation"), values = c("solid", "dashed"))+
   themePlot+
-  theme(
-    axis.title.x = element_blank()
+  theme(plot.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.title.x = element_blank()
   )
 plotIntroInc
 if(F){
@@ -119,25 +142,7 @@ errorFun <- function(xx){
 bstsErrArray <- tmpJoinArray %>% apply(c(1,2), errorFun)
 
 
-##plotting cosmetics
-scaleFactor <- 1
-textSize <- 15
-themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
-                   strip.background = element_rect(color = "black", 
-                                                   fill = "lightgrey"),
-                   axis.title.x = element_text(size = scaleFactor*textSize, 
-                                               face = "plain"),
-                   axis.title.y = element_text(size = scaleFactor*textSize, 
-                                               face = "plain"),
-                   axis.text.y =element_text(size = scaleFactor*textSize), 
-                   axis.text.x =element_text(size = scaleFactor*textSize),
-                   strip.text.x = element_text(size = scaleFactor*textSize),
-                   strip.text.y = element_text(size = scaleFactor*textSize),
-                   plot.title = element_text(hjust = 0.5, size = scaleFactor*textSize), 
-                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
-                   legend.position = "right",
-                   legend.title = element_text(size = scaleFactor*textSize),
-                   legend.text = element_text(size = scaleFactor*textSize))
+
 ##function for qq-plot
 createQQMean <- function(kEst, kBst, noY = F){
   #kEst and kBst in index form: 1 = sliding, 2 = disjoint, 3 = 2-max, 4 = 3-max 
