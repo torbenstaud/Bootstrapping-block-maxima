@@ -13,8 +13,8 @@ library(ggpubr)
 #load("Z:/bootstrap/mean/data/r90/meanEst_gamma-0.2_Ts1_Distr1R.data")
 #Parameters: gamma = -0.2, marginal = gpd, tsmod = armax, beta = 0.5, r = 90, m = 80
 
-load(here("scripts/mean/bst/data/MeanBst_R90gamma-0.2_Ts3_Distr1_beta0.5_M80.Rdata")) #meanArray
-load(here("scripts/mean/bst/data/MleEst_R90gamma-0.2_Ts3_Distr1_beta0.5.Rdata"))  #estarray
+load(here("scripts/mean/bst/data/MeanEst_R90gamma-0.2_Ts3_Distr1_beta0.5.Rdata")) #meanArray
+load(here("scripts/mean/bst/data/MeanBst_R90gamma-0.2_Ts3_Distr1_beta0.5_M80.Rdata"))  #estarray
 sourceCpp(here("src/0sourceC.cpp"))
 
 source(here("scripts/mean/bst/0parametersBstRFix.R"))
@@ -27,12 +27,88 @@ source(here("scripts/mean/bst/0parametersBstRFix.R"))
 #QQ-Plots and Histogramms----
 #dims = N x mVec x kVec x B
 
-estsArray <- meanArray[,5,] #5 is the index for m = 80
-bstArray <- estArray
+
 # parameters: 90 (blocksize), 1(gpd), 3(tsmod), -0.2(gamma), 10^6(repetitions),
 # 0.5(beta)
+
+estsArray <- meanArray[,5,] #5 is the index for m = 80
+bstArray <- estArray[,,]
 truthMean <- getTruthC(90, 1,3,-0.2,10^6,0.5)
 estsErrArray <- estsArray - truthMean
+##create bootstrap error array
+tmpJoinArray <- array(dim = c(N, length(kVec), B+1))
+tmpJoinArray[,1,2] <- estsArray[,2]
+tmpJoinArray[,c(1,3,4),1] <- estsArray[,1]
+tmpJoinArray[,,seq(2,B+1)] <- bstArray
+errorFun <- function(xx){
+  xx[-1] - xx[1]
+}
+bstsErrArray <- tmpJoinArray %>% apply(c(1,2), errorFun)
+#plot from the introduction
+method_names <- c("sb", "db", "cb(2)", "cb(3)")
+tib_estErr <- 
+as_tibble(as.data.frame(as.table(estsErrArray))) %>%
+  rename(N_index = Var1, 
+         method_index = Var2, 
+         value = Freq) %>% 
+  mutate(N = N_index, method = method_names[method_index], 
+         char = "est_err", gamma = -0.2, parameter = "mean") %>% 
+  select(N, gamma, parameter, method, char, value)
+
+tib_bstErr <- 
+  as_tibble(as.data.frame(as.table(matrix(bstsErrArray, ncol = 4)))) %>%
+  rename(N_index = Var1, 
+         method_index = Var2, 
+         value = Freq) %>% 
+  mutate(N = N_index, method = method_names[method_index], 
+         char = "bst_err", gamma = -0.2, parameter = "mean") %>% 
+  select(N, gamma, parameter, method, char, value)
+
+tib_fullErr <- bind_rows(tib_estErr, tib_bstErr)
+
+
+facet_labels_method <- as_labeller(
+  c(
+    "db" = "db",
+    "sb" = "Naive Sliding",
+    "cb(2)" = "Circular"
+  )
+)
+tib_fullErr$method <- factor(tib_fullErr$method, 
+                             levels = c("sb", "cb(2)", "cb(3)", "db"))
+tib_sbvscb <- 
+  bind_rows(tib_fullErr %>% filter(method == "sb", char == "est_err"),
+            tib_fullErr %>% filter(method == "cb(2)", char == "bst_err"))
+plotIntroInc <- 
+tib_fullErr %>% 
+  filter(method != "db", method != "cb(3)") %>% 
+  ggplot(aes(x = value, y= after_stat(density)))+
+  geom_histogram(aes(x = value, fill = char), 
+                 alpha = 0.4, position = "identity", bins = 30)+
+  geom_density(aes(x = value, linetype = char), linewidth = 1)+
+  facet_grid(cols = vars(method), labeller = labeller(method = facet_labels_method))+
+  xlim(-0.2, 0.2)+
+  scale_y_continuous(limits = c(0,11), breaks = c(0, 3.0, 6.0, 9.0))+
+  labs(
+    y = "Density",
+    fill = "Error Type", linetype = "Error Type"
+  )+
+  scale_fill_manual(labels = c("Bootstrap", "Estimation"), values = c("#F8766D", "#00BFC4"))+
+  scale_linetype_manual(labels = c("Bootstrap", "Estimation"), values = c("solid", "dashed"))+
+  themePlot+
+  theme(
+    axis.title.x = element_blank()
+  )
+plotIntroInc
+if(F){
+  
+  ggsave(plotIntroInc, filename = sprintf("plotIncGpdMean-0.1Armax(0.5)Hists.pdf"),
+         device = "pdf", path = here("results/"),
+         width = 12.5, height = 4)
+}
+
+
+#for the supplement
 ##create bootstrap error array
 tmpJoinArray <- array(dim = c(N, length(kVec), B+1))
 tmpJoinArray[,,1] <- estsArray
@@ -42,7 +118,9 @@ errorFun <- function(xx){
 }
 bstsErrArray <- tmpJoinArray %>% apply(c(1,2), errorFun)
 
+
 ##plotting cosmetics
+scaleFactor <- 1
 textSize <- 15
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
                    strip.background = element_rect(color = "black", 
@@ -118,92 +196,6 @@ createHistMean <- function(kEst, kBst, noY = F){
             axis.ticks.y = element_blank())
     }
 }
-
-
-
-# ####OLD
-# errorFun <- function(xx){
-#   xx[-1] - xx[1]
-# }
-# #explore
-# scaleFactor <- 2
-# textSize <- 12
-# themePlot <- theme(panel.border = element_rect(color = "black", fill = NA),
-#                    strip.background = element_rect(color = "black", 
-#                                                    fill = "lightgrey"),
-#                    axis.title.x = element_text(size = scaleFactor*textSize, 
-#                                                face = "plain"),
-#                    axis.title.y = element_text(size = scaleFactor*textSize, 
-#                                                face = "plain"),
-#                    axis.text.y =element_text(size = scaleFactor*textSize), 
-#                    axis.text.x =element_text(size = scaleFactor*textSize),
-#                    strip.text.x = element_text(size = scaleFactor*textSize),
-#                    strip.text.y = element_text(size = scaleFactor*textSize),
-#                    plot.title = element_text(hjust = 0.5, size = scaleFactor*textSize), 
-#                    #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
-#                    legend.position = "right",
-#                    legend.title = element_text(size = scaleFactor*textSize),
-#                    legend.text = element_text(size = scaleFactor*textSize))
-# 
-# #createQQMean <- function(kEst, kBst, mInd = 4, noY = F){
-#   #kEst and kBst in index form: 1 = sliding, 2 = disjoint, 3 = 2-max, 4 = 3-max 
-#   estErrors <- 10*quantile(estArrayMean[, mInd, kEst,1] - truthMean, 
-#                         seq(0.001,0.999, length.out = N))
-#   bstErrors <- 10*quantile(c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun)), 
-#                         seq(0.001,0.999, length.out = N))
-#   ggplot(mapping = aes(x = estErrors, y = bstErrors))+
-#     geom_point()+
-#     xlim(-1.5, 1.5)+
-#     ylim(-1.5, 1.5)+
-#     geom_abline(col = "red")+
-#     labs(
-#       y = "Quantiles * 10", 
-#       title = "QQ-Plot of the estimation error vs bootstrap error for the mean"
-#     )+
-#     themePlot+
-#     theme(plot.title = element_blank(),
-#           axis.title.y = element_text(size = scaleFactor*textSize), 
-#           axis.title.x = element_blank(),
-#           axis.text.x = element_blank(), 
-#           axis.ticks.x = element_blank()
-#           )+
-#     if(noY == T){
-#       theme(axis.text.y = element_blank(),
-#             axis.ticks.y = element_blank(), 
-#             axis.title.y = element_blank())
-#     }
-# }
-# #createHistMean <- function(kEst, kBst, mInd = 4, noY = F){
-#   kNames <- 
-#     c("sb", "db", "cb(2)", "cb(3)")
-#   estErrors <- estArrayMean[, mInd, kEst,1] - truthMean
-#   bstErrors <- c(apply(estArrayMean[,mInd, kBst,], c(1), errorFun))
-#   histTib <- tibble(type = rep(
-#     c(paste0("Estimation Error"), 
-#       paste0("Bootstrap Error")),
-#                                c(N, N*B)),
-#                     val = c(estErrors, bstErrors))
-#   histTib %>% ggplot(aes(x = val))+
-#     geom_histogram(aes(x = val, fill = type, y = after_stat(density)), alpha = 0.3, 
-#                    position = "identity")+
-#     geom_density(aes(x = val, linetype = type))+
-#     xlim(-0.2,0.2)+
-#     ylim(0, 11)+
-#     labs(
-#       x = paste0(kNames[kEst], " vs ", kNames[kBst]),
-#       y = "Density",
-#       fill = "Error Type:", linetype = "Error Type:"
-#     )+
-#     scale_linetype_manual(values = c("solid", "dashed"))+
-#     theme(plot.title = element_blank()
-#           )+
-#     themePlot+
-#     if(noY){
-#       theme(axis.title.y = element_blank(), 
-#             axis.text.y = element_blank(), 
-#             axis.ticks.y = element_blank())
-#     }
-# }
 
 
 #create histogram plots
