@@ -5,13 +5,13 @@ tsModVec <- c(3) # 1 =iid, 2 = m-dep, 3 = armax
 distrVec <- c(3 ,4) #3=frechet, 4 = pareto
 betaVec <- c(0, 0.25, 0.5, 0.75) # 0 = iid
 #Fixed Parameters
-N <- 5*10^3 #number of experiment repitions
+N <- 1*10**3#5*10^3 #number of experiment repitions
 B <- 10^3 #number of Bootstrap replicates
 nVec <- 10^3 #FIXED n
 n <- nVec[1] #FIXED n
 rVec <- c(8,12 ,16, 20, 24, 28, 36, 40)
 mVec <- as.integer(n/rVec)
-kVec <- c(0, 1,2,3) #different k-max estimators
+kVec <- c(0, 1,2) #different k-max estimators
 #dims <- c(N, length(mVec), length(kVec)) #shape of data array
 
 

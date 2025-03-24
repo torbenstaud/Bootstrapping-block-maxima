@@ -7,7 +7,7 @@
 #_____________________________________________________________________
 
 
-textSize <- 15
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -23,3 +23,11 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
                    legend.position = "right",
                    legend.title = element_text(size = textSize),
                    legend.text = element_text(size = textSize))
+
+ownPalette <- #based on dark2
+  c("cb"= "#F8766D", 
+    "sb-cb" = "#F8766D",
+    "cb(2)" = "#F8766D",  
+    "cb(3)" = "#7CAE00",  
+    "db" = "#00BFC4",  
+    "sb" = "#C77CFF")

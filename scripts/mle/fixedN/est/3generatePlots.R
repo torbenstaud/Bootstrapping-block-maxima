@@ -21,7 +21,9 @@ varTibMleEstPl$k <- factor(varTibMleEstPl$k, levels = c(1,2,3,0),
                             )
 )
 ownPalette <- #based on dark2
-  c("cb(2)" = "#F8766D",  
+  c("cb" = "#F8766D",  
+    "sb-cb"= "#F8766D",  
+    "cb(2)" = "#F8766D",  
     "cb(3)" = "#7CAE00",  
     "db" = "#00BFC4",  
     "sb" = "#C77CFF")
@@ -134,7 +136,7 @@ ggsave(combPlot, path = here("results/"),
 }
 
 #now plot for the paper
-textSize <- 17
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -178,8 +180,12 @@ if(FALSE){
   )
 }
 #for jrssb
+rescale <- 10
+varTibMleEstPl$k <- factor(varTibMleEstPl$k,
+                           levels = c("cb(2)", "db", "cb(3)", "sb"),
+                           labels = c("cb", "db", "cb(3)", "sb"))
 msePlotMainJrssb <- 
-  varTibMleEstPl %>% filter(marginal == "Pareto") %>% 
+  varTibMleEstPl %>% filter(marginal == "Pareto", k %in% c("db", "cb", "sb")) %>% 
   ggplot(aes(x = m, y = mse*rescale, col = k))+
   geom_line(linewidth = 1.1)+
   facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
@@ -205,6 +211,6 @@ msePlotMainJrssb
 if(FALSE){
   ggsave(msePlotMainJrssb, path = here("results/"), 
          filename = "plotFreFixNMseMainJrssb.pdf", device = "pdf",
-         width = 11, height = 6, 
+         width = 13, height = 7, 
   )
 }

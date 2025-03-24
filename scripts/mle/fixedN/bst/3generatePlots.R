@@ -34,7 +34,9 @@ bstFreVarTibPl$k <- factor(bstFreVarTibPl$k, levels = c(0,2,3,1),
                            )
 )
 ownPalette <- #based on dark2
-  c("cb(2)" = "#F8766D",  
+  c("sb-cb" = "#F8766D",
+    "cb" = "#F8766D",
+    "cb(2)" = "#F8766D",  
     "cb(3)" = "#7CAE00",  
     "db" = "#00BFC4",  
     "sb" = "#C77CFF")
@@ -116,9 +118,14 @@ if(FALSE){
   )
 }
 #now for the main paper: no Fréchet marginals-----
-
+bstFreVarTibPl$k <- factor(bstFreVarTibPl$k, 
+                           levels = c("db", "sb", "cb(2)", "cb(3)"),
+                           labels = c("db", "sb", "cb", "cb(3)")
+                           
+)
 bstVarPlotMain <- 
-  bstFreVarTibPl %>% filter(marginal == "Pareto") %>% 
+  bstFreVarTibPl %>% filter(marginal == "Pareto", 
+                            k %in% c("db", "cb")) %>% 
   mutate(asVar = m*varBst, asTrueVar = m*trueVar) %>% 
   filter(alpha != 2) %>% 
   ggplot()+
@@ -151,7 +158,7 @@ if(FALSE){
 if(FALSE){
   ggsave(bstVarPlotMain, path = here("results/"), 
          filename = "plotFreFixNVarEstMainJrssb.pdf", device = "pdf",
-         width = 15, height = 10, 
+         width = 13, height = 7, 
   )
 }
 
@@ -160,7 +167,7 @@ if(FALSE){
 load(here("scripts/mle/fixedN/bst/data/CiFreNfix"))
 ciFreTibNfix
 ##sizes----
-textSize <- 15
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -187,7 +194,7 @@ ciFreTibNFixPlot <- ciFreTibNfix %>% filter(
 
 ciFreTibNFixPlot$k <- factor(ciFreTibNFixPlot$k, levels = c(0,2,3,1),
                              labels = c(parse(text = TeX("sb")),
-                                        parse(text = TeX("cb(2)")), 
+                                        parse(text = TeX("cb")), 
                                         parse(text = TeX("cb(3)")), 
                                         parse(text = TeX("db"))
                              )
@@ -260,19 +267,19 @@ ciWidthPlot
 ciWidthDb <- ciFreTibNFixPlot %>% filter(k == "db") %>% select(-c(k,empCov)) %>% 
   rename(dbWidth = "avgWidth")
 ciWidthRel <- left_join(ciFreTibNFixPlot, ciWidthDb) %>% 
-  filter(k %in% c("cb(2)", "cb(3)")) %>% mutate(relWidth = dbWidth/avgWidth)
-ciWidthRelPlot <- ciWidthRel %>% filter( m != 31) %>% 
+  filter(k %in% c("cb", "cb(3)")) %>% mutate(relWidth = avgWidth/dbWidth)
+ciWidthRelPlot <- ciWidthRel %>% filter() %>% 
   ggplot()+
   geom_line(aes(x = m, y = relWidth, col = k),
             linewidth = 1.1)+
-  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "solid",
              linewidth = 1.1)+
   facet_grid(alpha~marginal+beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Relative average width"),
         title = "Average relative width of confidence intervals",
   )+
-  scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
+  #scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
   scale_color_manual(values = ownPalette)+
@@ -295,9 +302,9 @@ if(FALSE){
 }
 
 #now for the main paper, where we omit the Fréchet marginal case
-ciFreTibNFixPlotMain <- ciFreTibNFixPlot %>% filter( m != 31, marginal == "Pareto")
+ciFreTibNFixPlotMain <- ciFreTibNFixPlot %>% filter(marginal == "Pareto")
 ciCovPlotMain <- 
-  ciFreTibNFixPlotMain %>%  filter( m != 31, marginal == "Pareto") %>% 
+  ciFreTibNFixPlotMain %>%  filter( marginal == "Pareto") %>% 
   filter(k != "sb") %>% 
   ggplot()+
   geom_line(aes(x = m, y = empCov, col = k),
@@ -338,19 +345,19 @@ ciWidthPlotMain
 ciWidthDbMain <- ciFreTibNFixPlotMain %>% filter(k == "db") %>% select(-c(k,empCov)) %>% 
   rename(dbWidth = "avgWidth")
 ciWidthRelMain <- left_join(ciFreTibNFixPlotMain, ciWidthDbMain) %>% 
-  filter(k %in% c("cb(2)", "cb(3)")) %>% mutate(relWidth = dbWidth/avgWidth)
-ciWidthRelPlotMain <- ciWidthRelMain %>% filter( m != 31) %>% 
+  filter(k %in% c("cb", "cb(3)")) %>% mutate(relWidth = avgWidth/dbWidth)
+ciWidthRelPlotMain <- ciWidthRelMain %>% filter() %>% 
   ggplot()+
   geom_line(aes(x = m, y = relWidth, col = k),
             linewidth = 1.1)+
-  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "solid",
              linewidth = 1.1)+
   facet_grid(alpha~beta+marginal, scales = "free_y", labeller = label_parsed)+
   labsPlot+
   labs( y = paste0("Relative average width"),
         title = "Average relative width of confidence intervals",
   )+
-  scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
+  #scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
   scale_color_manual(values = ownPalette)+
@@ -368,12 +375,16 @@ combCiPlotMain
 if(FALSE){
   ggsave(combCiPlotMain, path = here("results/"), 
          filename = "plotFreFixNCiMain.pdf", device = "pdf",
-         width = 10, height = 10, 
+         width = 13, height = 7, 
   )
 }
 #for jrssb
+ciFreTibNFixPlotMain$k <- 
+  factor(ciFreTibNFixPlotMain$k, 
+         levels = c("sb", "db", "cb", "cb(3)"),
+         labels = c("sb", "db", "sb-cb", "cb(3)"))
 ciCovPlotMainJrssb <- 
-  ciFreTibNFixPlotMain %>%  filter( m != 31, marginal == "Pareto") %>% 
+  ciFreTibNFixPlotMain %>%  filter( marginal == "Pareto") %>% 
   filter(k != "sb") %>% 
   ggplot()+
   geom_line(aes(x = m, y = empCov, col = k),
@@ -381,33 +392,36 @@ ciCovPlotMainJrssb <-
   geom_hline(yintercept = 0.95, col = "black", linetype = "dashed",
              linewidth = 1.1)+
   facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
+  themePlot+
   labsPlot+
+  labs(col = "Confidence Interval:")+
   labs( y = paste0("Empirical coverage"),
         title = "Confidence intervals for the shape")+
-  themePlot+
   scale_color_manual(values = ownPalette)+
   theme(strip.text.y = element_blank(),
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         plot.title = element_blank()
         )+
   scale_y_continuous(
-    breaks = c(0.85, 0.9, 0.95)
-  )
+    limits = c(0.85, 1)
+  )+
+  scale_x_continuous(breaks = c(25, 50, 75))
 ciCovPlotMainJrssb
 
 
-ciWidthRelPlotMainJrssb <- ciWidthRelMain %>% filter( m != 31) %>% 
+ciWidthRelPlotMainJrssb <- ciWidthRelMain %>% filter( ) %>% 
   ggplot()+
   geom_line(aes(x = m, y = relWidth, col = k),
             linewidth = 1.1)+
-  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "dashed",
+  geom_hline(yintercept = 1, col = "#00BFC4",
              linewidth = 1.1)+
   facet_grid(alpha~beta, scales = "free_y", labeller = label_parsed)+
   labsPlot+
+  labs(col = "Confidence Interval:")+
   labs( y = paste0("Relative average width"),
         title = "Average relative width of confidence intervals",
   )+
-  scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
+  #scale_y_continuous(limits = c(0.95, 1.25), breaks = c(1,1.1,1.2))+
   scale_x_continuous(breaks = c(25, 50, 75))+
   themePlot+
   scale_color_manual(values = ownPalette)+

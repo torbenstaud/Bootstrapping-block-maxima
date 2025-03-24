@@ -93,15 +93,16 @@ CbArr <- array( dim = c(nY - winSize + 1, 3))
 bstVars <- array(dim = c(nY - winSize + 1, 2))
 
 if(F){#17mins with B = 10**3
-  B <-  10**3
+  B <-  10**2
   t0 <- Sys.time()
+  level <- 0.2
   for(indW in seq(1, nY - winSize + 1)){
     dataWin <- (data %>% filter(
       year %in% seq(yearVec[indW], yearVec[indW] + 39)
     ))$RSK
     ciDbDat <- 
       ciCircmaxRl(dataWin, B = B, r = blockSize, k = 1, mthd = "db", onesided = F,
-                  botcutoffGam = -0.3, topcutoffGam = 0.5) #werte für die cutoffs, da die shape über den ganzen Zeitraum als ~0.1 geschätzt wird und wir ein 0.4 band drum legen
+                  botcutoffGam = -0.3, topcutoffGam = 0.5, niv = level) #werte für die cutoffs, da die shape über den ganzen Zeitraum als ~0.1 geschätzt wird und wir ein 0.4 band drum legen
     DbArr[indW,c(1, 2,3)] <- ciDbDat #est, lower and upper
     
     if(max(abs(ciDbDat)) >= 100 ){
@@ -115,7 +116,8 @@ if(F){#17mins with B = 10**3
     # print("sb")#debug
     
     ciCbDat <- 
-      ciCircmaxRl(dataWin, B = B, r = blockSize, k = 2, mthd = "cb", onesided = F)
+      ciCircmaxRl(dataWin, B = B, r = blockSize, k = 2, mthd = "cb", onesided = F, 
+                  niv = level)
     CbArr[indW,c(1, 2,3)] <- ciCbDat #est, lower and upper
     
     if(max(abs(ciCbDat)) >= 100 ){
@@ -126,9 +128,9 @@ if(F){#17mins with B = 10**3
   }
   tDel <- difftime(Sys.time(), t0)
   cat(format(tDel))
-  save(DbArr, CbArr, file = file.path("data", "array_rl_cs"))
+  save(DbArr, CbArr, file = file.path("data", "array_rl_cs-0.30.5Niv0.9"))
 }
-load(file = file.path("data", "array_rl_cs_-0.30.5")) # DbArr, CbArr
+load(file = file.path("data", "array_rl_cs-0.30.5")) # DbArr, CbArr
 # create tibble with data
 ciTib <- bind_rows(
   tibble(
@@ -155,15 +157,23 @@ ciTib <- bind_rows(
 ) %>% mutate(
   year = year + 40
 )
+ciTib
+##corecct the boundaries
+load("data/coeff_rl0.5")
+shape_est <- (precDb %>% fgev())$par[3]
+corr_factor <- coeff_rl[1]+shape_est*coeff_rl[2]+ winSize *coeff_rl[3]
+
+ciTib <- 
 ciTib %>% mutate(
-  width = upper - lower
+  lower = (lower - estim)*corr_factor + lower, 
+  upper = (upper - estim)*corr_factor + upper
 ) 
 
 avgWidths <- (ciTib %>% mutate(
   width = upper - lower) %>% group_by(type) %>% 
     summarise(avgWidth = median(width)) %>% 
     filter(type != "sb") %>% select(avgWidth))[[1]]
-avgWidths[2]/avgWidths[1]
+avgWidths[1]/avgWidths[2] #wenn < 1 gut!
 ##averaging of two year window
 twoYeaAvgs <- 
   array(dim = c(length(ciTib$upper)/2, 2))
@@ -221,7 +231,8 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
                    legend.title = element_text(size = textSize),
                    legend.text = element_text(size = textSize))
 ownPalette <- #based on dark2
-  c("cb(2)" = "#F8766D",  
+  c("sb-cb" = "#F8766D",
+    "cb(2)" = "#F8766D",  
     "cb(3)" = "#7CAE00",  
     "db" = "#00BFC4",  
     "sb" = "#C77CFF")
@@ -315,7 +326,7 @@ if(F){
 
 #Jrssb
 
-textSize <- 15
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -411,7 +422,7 @@ bstVarsMean <- array(dim = c(nY - winSize + 1, 2))
 
 
 if(F){#17mins with B = 10**3
-  B <-  10**3
+  B <-  10**2
   t0 <- Sys.time()
   for(indW in seq(1, nY - winSize + 1)){
     dataWin <- (data %>% filter(
@@ -432,7 +443,7 @@ if(F){#17mins with B = 10**3
   cat(format(tDel))
   save(DbArrMean, CbArrMean, file = file.path("data", "array_mean_prcp_cs"))
 }
-load(file = file.path("data", "array_mean_cs_-0.10.4"))
+load(file = file.path("data", "array_mean_prcp_cs"))
 # create tibble with data
 ciTibMean <- bind_rows(
   tibble(
@@ -467,7 +478,7 @@ avgWidthsMean <- (ciTibMean %>% mutate(
   width = upper - lower) %>% group_by(type) %>% 
     summarise(avgWidth = median(width)) %>% 
     filter(type != "sb") %>% select(avgWidth))[[1]]
-avgWidthsMean[2]/avgWidthsMean[1]
+avgWidthsMean[1]/avgWidthsMean[2] #wenn < 1: cb besser als db
 ##averaging of two year window
 twoYeaAvgsMean <- 
   array(dim = c(length(ciTibMean$upper)/2, 2))
@@ -487,11 +498,15 @@ for(indT in seq(1,3)){
 avgCiTibMean <- tmpTibMean %>% filter(year != 1919)
 rm(tmpTibMean)
 
-
+##corecct the boundaries
+load("data/coeff_rl")
+corr_factor_mean <- coeff_mean[1]+shape_est*coeff_mean[2]+ winSize *coeff_mean[3]
 
 #plotting of confidence intervals
 
-ciTibPltMean <- avgCiTibMean
+ciTibPltMean <- avgCiTibMean %>% 
+  mutate(lower = (lower -estim)*corr_factor_mean + lower, 
+         upper = (upper -estim)*corr_factor_mean+ upper)
 ##cb estim substituted by sb estimator
 ciTibPltMean <- ciTibPltMean %>%  bind_cols(
   sbEstim = rep((ciTibPltMean %>% filter(type == "sb"))$estim, 3)
@@ -618,7 +633,7 @@ ciPlotMeanJrssb <-
   )
 ciPlotMeanJrssb
 
-ciWidthPltMeanJrssb <- 
+ciWidthPltMeanJrssb <-
   ciTibPltMean %>% mutate(width = upper - lower) %>%  
   ggplot(aes(x = year, y = width, col = type))+
   geom_line(linewidth = 1.1)+
@@ -660,17 +675,17 @@ tib_mean_cs <-
 
 
 
-library(ggplot2)
-library(dplyr)
+
 
 # 1️⃣ Daten für die zwei Facets anpassen
-tibble_ci <- tib_mean_cs %>% mutate(panel = "Confidence Intervals")
+tibble_ci <- tib_mean_cs %>% mutate(panel = "Confidence Interval")
 tibble_ci$parameter <- factor(tibble_ci$parameter, levels = c("rl", "mean"), 
                               labels = c("Return Level", "Mean"))
 tibble_width <- tib_mean_cs %>% mutate(panel = "CI Width")
 tibble_width$parameter <- factor(tibble_width$parameter, levels = c("rl", "mean"), 
                                  labels = c("Return Level", "Mean"))
 tibble_combined <- bind_rows(tibble_ci, tibble_width)
+
 
 
 # 3️⃣ Plot mit `facet_wrap` und `scales = "free_y"`
@@ -703,10 +718,135 @@ plotCombCs <-
     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
   )
 plotCombCs
+
+
+#erster Plot 2x1 Return Level
+
+
+# Wandle den Faktor um
+# Richtige Levels und Labels definieren
+# Panel-Reihenfolge sauber setzen
+# tibble_combined$panel <- factor(as.character(tibble_combined$panel),
+#                                 levels = c("Confidence Interval", "CI Width"))
+# tibble_ci$panel <- factor(as.character(tibble_ci$panel),
+#                           levels = c("Confidence Interval", "CI Width"))
+# tibble_width$panel <- factor(as.character(tibble_width$panel),
+#                              levels = c("Confidence Interval", "CI Width"))
+
+
+
+
+type_levels <- c("db", "cb(2)")
+type_labels <- c("db" = "db", "cb(2)" = "sb-cb")
+
+# In ALLEN drei Dataframes:
+set_panel_order <- function(df) {
+  df$panel <- factor(as.character(df$panel),
+                     levels = c("Confidence Interval", "CI Width"))
+  df$type <- factor(as.character(df$type),
+                    levels = type_levels,
+                    labels = type_labels)
+  df
+}
+tibble_combined <- set_panel_order(tibble_combined)
+tibble_ci       <- set_panel_order(tibble_ci)
+tibble_width    <- set_panel_order(tibble_width)
+
+
+
+
+plotRlCsPrcp <- 
+ggplot(tibble_combined %>% filter(parameter == "Return Level")) +
+  
+  # 🔹 1. Facet-Row: Estimate mit Konfidenzintervall
+  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = type), alpha = 0.4, data = tibble_ci %>% filter(parameter == "Return Level"), col = "black", linewidth = 0.1) +
+  geom_line(aes(x = year, y = estim, color = type), linewidth = 1.1, 
+            data = tibble_ci %>% filter(parameter == "Return Level")) +
+  
+  # 🔹 2. Facet-Row: CI Width
+  geom_line(aes(x = year, y = width, color = type), linewidth = 1.1, 
+            data = tibble_width %>% filter(parameter == "Return Level")) +
+  
+  # 🎨 Faceting nach `parameter` (Spalten) & `panel` (Zeilen)
+  facet_grid(rows = vars(panel), cols = vars(parameter), scales = "free_y") +
+  
+  # 🏷️ Labels & Design
+  labs(
+    x = "Year",
+    y = "",
+    color = "Bootstrap:",
+    fill = "Bootstrap:",
+    title = "Comparison of CI Estimation & Width"
+  ) +
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    strip.background.y = element_blank(),
+    strip.text.y = element_blank()
+  )+
+  scale_color_manual(
+    values = ownPalette,
+    labels = type_labels
+  ) +
+  scale_fill_manual(
+    values = ownPalette,
+    labels = type_labels
+  )
+
+
+plotRlCsPrcp
+#zweiter Plot 2x1 Mean
+plotMeanCsPrcp <- 
+  ggplot(tibble_combined %>% filter(parameter == "Mean")) +
+  
+  # 🔹 1. Facet-Row: Estimate mit Konfidenzintervall
+  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = type), alpha = 0.4, data = tibble_ci %>% filter(parameter == "Mean"), col = "black", linewidth = 0.1) +
+  geom_line(aes(x = year, y = estim, color = type), linewidth = 1.1, 
+            data = tibble_ci %>% filter(parameter == "Mean")) +
+  
+  # 🔹 2. Facet-Row: CI Width
+  geom_line(aes(x = year, y = width, color = type), linewidth = 1.1, 
+            data = tibble_width %>% filter(parameter == "Mean")) +
+  
+  # 🎨 Faceting nach `parameter` (Spalten) & `panel` (Zeilen)
+  facet_grid(rows = vars(panel), cols = vars(parameter), scales = "free_y") +
+  
+  # 🏷️ Labels & Design
+  labs(
+    x = "Year",
+    y = "",
+    color = "Bootstrap:",
+    fill = "Bootstrap:",
+    title = "Comparison of CI Estimation & Width"
+  ) +
+  themePlot+
+  theme(
+    plot.title = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )+
+  scale_color_manual(
+    values = ownPalette,
+    labels = type_labels
+  ) +
+  scale_fill_manual(
+    values = ownPalette,
+    labels = type_labels
+  )
+
+plotMeanCsPrcp
+
+plot_combinedCsFaCoRlMean <- plotRlCsPrcp + plotMeanCsPrcp +
+  plot_layout(nrow = 1, guides = "collect") &
+  theme(legend.position = "right")
+
+plot_combinedCsFaCoRlMean
+
+
 if(F){
-  ggsave(plot = plotCombCs, 
-         filename = here("results/plotCaseStudy.pdf"),
-         device = "pdf", width = 11, height = 7) #ursprl 4
+  ggsave(plot = plot_combinedCsFaCoRlMean, 
+         filename = here("results/plot_combinedCsFaCoRlMean.pdf"),
+         device = "pdf", width = 13, height = 7) #ursprl 4
 }
 
 
@@ -1017,3 +1157,4 @@ if(F){
          filename = here("results/plotCaseStudy.pdf"),
          device = "pdf", width = 11, height = 8) #ursprl 4
 }
+

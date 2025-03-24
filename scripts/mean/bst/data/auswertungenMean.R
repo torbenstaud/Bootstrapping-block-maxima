@@ -173,7 +173,7 @@ createQQMean <- function(kEst, kBst, noY = F){
 }
 createHistMean <- function(kEst, kBst, noY = F){
   kNames <- 
-    c("sb", "db", "cb(2)", "cb(3)")
+    c("sb", "db", "cb", "cb(3)")
   histTib <- tibble(type = rep(
     c(paste0("Estimation Error"), 
       paste0("Bootstrap Error")),
@@ -212,12 +212,12 @@ pH4 <- createHistMean(2,2, noY = T)
 #create qq plots
 pQ1 <- createQQMean(1,1)
 pQ2 <- createQQMean(1,3, noY = T)
-pQ3 <- createQQMean(1,4, noY = T)
+#pQ3 <- createQQMean(1,4, noY = T)
 pQ4 <- createQQMean(2,2, noY = T)
 #combine both qq and histogram plots
-histQQPlots <- ggarrange(pQ1, pQ2, pQ3, pQ4, pH1,pH2,pH3,pH4, 
-                       ncol = 4, nrow = 2, common.legend = T, 
-                       legend = "right", widths = c(1.3,1,1,1,1,1,1,1),
+histQQPlots <- ggarrange(pQ1, pQ2, pQ4, pH1,pH2,pH4, 
+                       ncol = 3, nrow = 2, common.legend = T, 
+                       legend = "right", widths = c(1.3,1,1,1,1,1),
                        heights = c(1,1.35))
 #pubhistQQPlots <- annotate_figure(histQQPlots, 
 #                top = text_grob("Mean estimation error", 
@@ -229,7 +229,7 @@ if(F){
   
 ggsave(histQQPlots, filename = "plotHistQQMean.pdf",
        device = "pdf", path = here("results/"),
-       width = 10, height = 6)
+       width = 13, height = 7)
 }
 
 #vergleiche schätzer----

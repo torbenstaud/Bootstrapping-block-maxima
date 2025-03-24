@@ -52,20 +52,16 @@ tmpDbTibMle <- fullBenchTibR %>% filter(expr == "disjoint") %>% rename(timeDB = 
 benchTibRelMle <- left_join(fullBenchTibR, tmpDbTibMle) %>% filter(expr !="disjoint") %>% 
   mutate(relTime = timeMed/timeDB)
 benchTibRelMle$expr <- benchTibRelMle$expr %>% factor(
-  levels = c("sliding", "k2", "k3",  "k2No", "k3No","disjoint"), 
-  labels = c("sb", "cb(2)", "cb(3)", "k2No", "k3No", "db")
+  levels = c("k2", "sliding", "k3",  "k2No", "k3No","disjoint"), 
+  labels = c("cb(2)", "sb", "cb(3)", "k2No", "k3No", "db")
 )
-ownPalette <- #based on dark2
-  c("cb(2)" = "#F8766D",  
-    "cb(3)" = "#7CAE00",  
-    "db" = "#00BFC4",  
-    "sb" = "#C77CFF")
+
 
 benchTibRelMle$B <- benchTibRelMle$B %>% factor(
   levels = c(250, 500, 750, 1000), 
   labels = c("B = 250", "B = 500", "B = 750", "B = 1000")
 )
-textSize <- 17
+textSize <- 20
 themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
                    strip.background = element_rect(color = "black", 
                                                    fill = "lightgrey", size = 0.2),
@@ -82,17 +78,22 @@ themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size 
                    legend.title = element_text(size = textSize),
                    legend.text = element_text(size = textSize))
 ###plotting----
+benchTibRelMle$expr <- 
+  factor(benchTibRelMle$expr, 
+         levels = c("db", "sb", "cb(2)", "cb(3)", "k2No", "k3No"),
+         labels = c("db", "sb", "cb", "cb(3)", "k2No", "k3No"))
 relTimePlot <-
 benchTibRelMle  %>% mutate(n = m*r) %>% 
-  filter(!expr %in% c("k2No", "k3No"), m >= 40) %>% 
+  filter(!expr %in% c("k2No", "k3No", "cb(3)"), m >= 40) %>% 
   ggplot(aes(x = n, y = relTime, col = expr))+ 
   geom_line(linewidth = 1.1)+
-  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "longdash")+
+  geom_hline(yintercept = 1, col = "#00BFC4", linetype = "solid", linewidth = 1.1)+
   facet_wrap(~B, ncol = 4)+
   labsPlot+
   labs(x = "Total sample size n",
        title = "Relative runtimes for Fréchet MLE", 
-       y = "Relative time")+
+       y = "Relative Runtime", 
+       col = "Bootstrap:")+
   themePlot+
   scale_color_manual(values = ownPalette)+
   scale_x_continuous(
@@ -107,7 +108,7 @@ relTimePlot
 if(F){
 ggsave(relTimePlot, path = here("results/"), 
        filename = "plotrelTimePlotMleRFix.pdf", device = "pdf",
-       width = 10, height = 5, 
+       width = 13, height = 3.5, 
 )
 }
 

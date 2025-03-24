@@ -10,10 +10,9 @@ library(evd) #certain distributions
 library(here) #relative paths
 
 #sourcing of relevant files----
-# the following files need to be sourced: 
-# -0sourceC.cpp root
-# -0source.R root
-# -0parametersMleBstNFix.R in the same folder as this R.file
+Rcpp::sourceCpp("/gpfs/project/tosta102/bootstrap/0sourceC.cpp")  #c Functions
+source("/gpfs/project/tosta102/bootstrap/0source.R") #R Functions
+source(here("0parametersMleBstNFix.R")) #parameters
 
 #Initialize HPC index from foor loop----
 args <-  commandArgs(trailingOnly=TRUE)
@@ -45,7 +44,7 @@ nameSave <- paste(
 
 
 
-dims <- c(N, length(kVec), B)
+dims <- c(N, length(kVec), B+2) #(last coordinate: 1= estimator, B+2= anchor)
 
 
 #estimator specific
@@ -74,8 +73,9 @@ if(TRUE){
           kMaxSamp <- 
             lTableVec(kMaxC(obs, r, kVec[indK]), l = r*kVec[indK])
         }
-        
-        
+        est <- estFun(unlist(kMaxSamp))
+        shapeArray[NSeed, indK, 1] <- est[1]
+        scaleArray[NSeed, indK, 1] <- est[2]
         # Bootstrapping loop
         for(BootSeed in seq(1, B)){
           #cat("BootSeed = ", BootSeed)
@@ -88,8 +88,8 @@ if(TRUE){
             message(conditionMessage(cond))
             return(c(NA,NA))
           })
-          shapeArray[NSeed, indK, BootSeed] <- est[1]
-          scaleArray[NSeed, indK, BootSeed] <- est[2]
+          shapeArray[NSeed, indK, BootSeed+1] <- est[1]
+          scaleArray[NSeed, indK, BootSeed+1] <- est[2]
 
         }
       }
@@ -103,4 +103,11 @@ if(TRUE){
     }
   }
 }
+#correct anchoring
+shapeArray[NSeed, seq(1,2), B+2] <- shapeArray[NSeed, seq(1,2), 1] #db,sb trivial
+scaleArray[NSeed, seq(1,2), B+2] <- scaleArray[NSeed, seq(1,2), 1] #db,sb trivial
+shapeArray[NSeed, 3, B+2] <- shapeArray[NSeed, 1, 1] #cb needs sb
+scaleArray[NSeed, 3, B+2] <- scaleArray[NSeed, 1, 1] #cb needs sb
+
+
 save(shapeArray, scaleArray, file = here(paste0("data/", nameSave)))

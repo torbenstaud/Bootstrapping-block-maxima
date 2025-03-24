@@ -184,8 +184,8 @@ ciCircmax <-
 
 
 ciCircmaxRl <- 
-  function(xx, Time = 100, r, k, niv = 0.05, B = 10^3, topcutoffGam = 0.7, 
-           botcutoffGam = -0.7,
+  function(xx, Time = 100, r, k, niv = 0.05, B = 10^3, topcutoffGam = 0.5, 
+           botcutoffGam = -0.3, onesided = F,
            mthd = "cb"){
     #t0 <- Sys.time()
     m <- as.integer(length(xx)/r)
@@ -244,21 +244,20 @@ ciCircmaxRl <-
     theta_est <- gev_mle_cpp(xxMb)$par
     
     est <- gev_rl(Time, theta_est)
-    ##hier noch factor correction hin: basierend auf m und \hat gamma
-    #quants_corr <- quants*c_corr(m, theta_est[3]) #c_corr noch defn
-    c <- coeff_rl[1] + theta_est[3]*coeff_rl[2] + length(xx)/r*coeff_rl[3]
-    quants_corr <- (est_bst - quants)*c
+    # ##hier noch factor correction hin: basierend auf m und \hat gamma
+    # #quants_corr <- quants*c_corr(m, theta_est[3]) #c_corr noch defn
+    # c <- coeff_rl[1] + theta_est[3]*coeff_rl[2] + length(xx)/r*coeff_rl[3]
+    # quants_corr <- (est_bst - quants)*c
     #cat( sprintf("CI ist: [%s].\n",est + quants_corr))
-    return(unname(c(est, est + quants_corr)))
+    return(unname(c(est, est_bst + est - quants)))
     # return( list(chars = unname(c(est, 2*est - quants)), 
     #              variance = var(bstSamp)
     #                ))
   }
 
 ciCircmaxMean <- 
-  function(xx, Time = 100, r, k, niv = 0.05, B = 10^3, topcutoffGam = 0.5, 
-           botcutoffGam = -0.5, onesided = F
-           mthd = "cb"){
+  function(xx, Time = 100, r, k, niv = 0.05, B = 10^3, topcutoffGam = 100.5, 
+           botcutoffGam = -100.5, mthd = "cb", onesided = F){
     #t0 <- Sys.time()
     m <- as.integer(length(xx)/r)
     bstSamp <- rep(NA, B)
@@ -270,16 +269,16 @@ ciCircmaxMean <-
       len <- length(xxL)
       
       for(indB in seq(1,B)){
-        #counter <- 0
-        #indsBst <- sample(seq(1, len), replace = T)
-        #bsts <- unlist(xxL[indsBst])# 
-        while(!(theta_bst[3] <= topcutoffGam & theta_bst[3] >= botcutoffGam)){
-          indsBst <- sample(seq(1, len), replace = T)
-          bsts <- unlist(xxL[indsBst])# 
-          theta_bst <- gev_mle_cpp_lvec(bsts)$par
-          #counter <- counter +1
-          #cat(counter)
-        }
+        counter <- 0
+        indsBst <- sample(seq(1, len), replace = T)
+        bsts <- unlist(xxL[indsBst])#
+        # while(!(theta_bst[3] <= topcutoffGam & theta_bst[3] >= botcutoffGam)){
+        #   indsBst <- sample(seq(1, len), replace = T)
+        #   bsts <- unlist(xxL[indsBst])# 
+        #   theta_bst <- gev_mle_cpp_lvec(bsts)$par
+        #   #counter <- counter +1
+        #   #cat(counter)
+        # }
         
         bstSamp[indB] <-  meanCTabVec(bsts)
         theta_bst[3] <- 100
@@ -291,14 +290,14 @@ ciCircmaxMean <-
       xxMb <- kMaxC(xx, r= r, k = 1)
       set.seed(1994)
       for(indB in seq(1,B)){
-        #indBst <- sample(seq(1, m), replace = T)
-        #bsts <- xxMb[indBst]
-        while(!(theta_bst[3] <= topcutoffGam & theta_bst[3] >= botcutoffGam)){
-          indBst <- sample(seq(1, m), replace = T)
-          bsts <- xxMb[indBst]
-          theta_bst <- evd::fgev(bsts, std.err = F)$par
-          
-        }
+        indBst <- sample(seq(1, m), replace = T)
+        bsts <- xxMb[indBst]
+        # while(!(theta_bst[3] <= topcutoffGam & theta_bst[3] >= botcutoffGam)){
+        #   indBst <- sample(seq(1, m), replace = T)
+        #   bsts <- xxMb[indBst]
+        #   theta_bst <- evd::fgev(bsts, std.err = F)$par
+        #   
+        # }
         bstSamp[indB] <-  mean(bsts)
         theta_bst[3] <- 100
       }
@@ -322,12 +321,15 @@ ciCircmaxMean <-
     }
     theta_est <- gev_mle_cpp(xxMb)$par
     est <- mean(xxMb)
-    ##hier noch factor correction hin: basierend auf m und \hat gamma
-    #quants_corr <- quants*c_corr(m, theta_est[3]) #c_corr noch defn
-    c <- coeff_mean[1] + theta_est[3]*coeff_mean[2] + length(xx)/r*coeff_mean[3]
-    quants_corr <- (est_bst - quants)*1
+    # ##hier noch factor correction hin: basierend auf m und \hat gamma
+    # #quants_corr <- quants*c_corr(m, theta_est[3]) #c_corr noch defn
+    # c <- coeff_mean[1] + theta_est[3]*coeff_mean[2] + length(xx)/r*coeff_mean[3]
+    # quants_corr <- (est_bst - quants)*c
     #cat( sprintf("CI ist: [%s].\n",est + quants_corr))
-    return(unname(c(est, est + quants_corr)))
+    return(unname(c(est, est_bst + est - quants)))
+    #return(unname(c(est, est_bst + est - quants,bstSamp))) #debug
+    
+    
     # return( list(chars = unname(c(est, 2*est - quants)), 
     #              variance = var(bstSamp)
     #                ))

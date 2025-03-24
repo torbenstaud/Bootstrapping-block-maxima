@@ -109,7 +109,7 @@ var.sl <- function(gam_vec) {
 xx <- seq(-0.75, 1/2-10^(-3), length.out = 100)
 var_db_dat <- var.db(xx)
 var_sl_dat <- var.sl(xx)
-quot <- var_db_dat/var_sl_dat
+quot <- var_sl_dat/var_db_dat
 plt_data <- tibble(type = rep(c("db","sl"), each = length(xx)), 
                    gamma = c(xx,xx),
                    sigma = c(var_db_dat,var_sl_dat)
@@ -133,8 +133,8 @@ p_quot <- plt_quot_data %>% ggplot(aes(x = gamma, y = ratio))+
         axis.text.y=element_text(size=15),
         axis.title.x = element_text(size = 15),
         axis.title.y = element_text(size = 15))+
-  scale_x_continuous(limits = c(-0.5, 0.5))+
-  scale_y_continuous(limits = c(1, 1.17))
+  scale_x_continuous(limits = c(-0.5, 0.5))
+  #scale_y_continuous(limits = c(1, 1.17))
 p_quot
 if(F){
 ggsave(p_quot, filename = "plotAsyVarRatioMean.pdf", device = "pdf", 
