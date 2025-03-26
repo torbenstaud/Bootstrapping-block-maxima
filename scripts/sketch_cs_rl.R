@@ -6,6 +6,7 @@ library(ggplot2) #plotting
 library(ggpubr)#arranging 
 library(here) #relative paths
 library(Rcpp) #cpp api
+library(magrittr)
 #source files----
 source(here("src/0source.R"))
 source(here("src/0source_ts.R"))
@@ -93,31 +94,32 @@ CbArr <- array( dim = c(nY - winSize + 1, 3))
 bstVars <- array(dim = c(nY - winSize + 1, 2))
 
 if(F){#17mins with B = 10**3
-  B <-  10**2
+  B <-  10**3
   t0 <- Sys.time()
-  level <- 0.2
+  level <- 0.05
   for(indW in seq(1, nY - winSize + 1)){
     dataWin <- (data %>% filter(
       year %in% seq(yearVec[indW], yearVec[indW] + 39)
     ))$RSK
     ciDbDat <- 
       ciCircmaxRl(dataWin, B = B, r = blockSize, k = 1, mthd = "db", onesided = F,
-                  botcutoffGam = -0.3, topcutoffGam = 0.5, niv = level) #werte für die cutoffs, da die shape über den ganzen Zeitraum als ~0.1 geschätzt wird und wir ein 0.4 band drum legen
+                     botcutoffGam = -0.3, topcutoffGam = 0.5, niv = level)
+      # ciCircmaxRlPos(dataWin, B = B, r = blockSize, k = 1, mthd = "db", onesided = F,
+      #             botcutoffGam = -0.3, topcutoffGam = 0.5, niv = level) #werte für die cutoffs, da die shape über den ganzen Zeitraum als ~0.1 geschätzt wird und wir ein 0.4 band drum legen
     DbArr[indW,c(1, 2,3)] <- ciDbDat #est, lower and upper
     
     if(max(abs(ciDbDat)) >= 100 ){
       sprintf("Error at indW = %g für db", indW)
     }
     
-    # ciSbDat <- 
-    #   ciCircmaxRl(dataWin, B = B, r = blockSize, k = 1, mthd = "cb")
-    # SbArr[indW,c(1, 2,3)] <- ciSbDat[[1]]
-    # bstVars[indW,2] <- ciCbDat[[2]]
-    # print("sb")#debug
-    
+    #cat("db fertig") #debug
     ciCbDat <- 
       ciCircmaxRl(dataWin, B = B, r = blockSize, k = 2, mthd = "cb", onesided = F, 
-                  niv = level)
+                     botcutoffGam = -0.3, topcutoffGam = 0.5,
+                     niv = level)
+      # ciCircmaxRlPos(dataWin, B = B, r = blockSize, k = 2, mthd = "cb", onesided = F, 
+      #                botcutoffGam = -0.3, topcutoffGam = 0.5,
+      #             niv = level)
     CbArr[indW,c(1, 2,3)] <- ciCbDat #est, lower and upper
     
     if(max(abs(ciCbDat)) >= 100 ){
@@ -128,7 +130,7 @@ if(F){#17mins with B = 10**3
   }
   tDel <- difftime(Sys.time(), t0)
   cat(format(tDel))
-  save(DbArr, CbArr, file = file.path("data", "array_rl_cs-0.30.5Niv0.9"))
+  #save(DbArr, CbArr, file = file.path("data", "array_rl_cs-0.30.5Niv0.9"))
 }
 load(file = file.path("data", "array_rl_cs-0.30.5")) # DbArr, CbArr
 # create tibble with data
@@ -245,171 +247,171 @@ yearBounds <-
 #new main:
 
 ##averaged db block maxima
-avgPrecDb <- (precDb %>% 
-                stats::filter(sides = 1, filter = c(1/2,1/2)))[-1]
+# avgPrecDb <- (precDb %>% 
+#                 stats::filter(sides = 1, filter = c(1/2,1/2)))[-1]
 
-ciPlot <- 
-  ciTibPlt %>%  
-  ggplot(aes(x = year))+
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
-              linewidth = 0.1, col = "black")+
-  geom_line(
-    data = ciTibPlt,
-    aes(x = year, y = estim, col = type), linewidth = 1)+
- # scale_y_continuous(limits = c(0,70))+
-  scale_x_continuous(
-    breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-          length.out = 4) %>% 
-      round()
-  )+
-  scale_color_manual(
-    values = ownPalette
-  )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in",
-    y = paste0("Precipitation"),
-    x = "Year",
-    col = "Bootstrap:",
-    fill = "Bootstrap:"
-  )
-ciPlot
-
-
-#explore begin
-ciTibPlt <- ciTibPlt %>% mutate(width = upper - lower) 
-ciWidthPlt <- 
-  ciTibPlt %>% 
-  ggplot(aes(x = year, y = width, col = type))+
-  geom_line(linewidth = 1.1)+
-  scale_x_continuous(
-    breaks = 
-      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-           length.out = 4) %>% 
-         round()) 
-  )+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in ",
-    y = paste0("CI width"),
-    x = "Year"
-  )
-ciWidthPlt
+# ciPlot <- 
+#   ciTibPlt %>%  
+#   ggplot(aes(x = year))+
+#   geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
+#               linewidth = 0.1, col = "black")+
+#   geom_line(
+#     data = ciTibPlt,
+#     aes(x = year, y = estim, col = type), linewidth = 1)+
+#  # scale_y_continuous(limits = c(0,70))+
+#   scale_x_continuous(
+#     breaks = 
+#       seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#           length.out = 4) %>% 
+#       round()
+#   )+
+#   scale_color_manual(
+#     values = ownPalette
+#   )+
+#   #facet_wrap(vars(ciType), 
+#   #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in",
+#     y = paste0("Precipitation"),
+#     x = "Year",
+#     col = "Bootstrap:",
+#     fill = "Bootstrap:"
+#   )
+# ciPlot
 
 
-fullCiPlot <- 
-  ggarrange(
-    ciPlot, ciWidthPlt, common.legend = T, legend = "right"
-  )
-fullCiPlot
-
-#explore end
-if(F){
-  ggsave(plot = fullCiPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
-         device = "pdf", width = 10, height = 5) #ursprl 4
-}
-if(F){
-  ggsave(plot = fullCiPlot2, filename = here("results/plotCaseStudyCbandsRel.pdf"),
-         device = "pdf", width = 10, height = 5) #ursprl 4
-}
+# #explore begin
+# ciTibPlt <- ciTibPlt %>% mutate(width = upper - lower) 
+# ciWidthPlt <- 
+#   ciTibPlt %>% 
+#   ggplot(aes(x = year, y = width, col = type))+
+#   geom_line(linewidth = 1.1)+
+#   scale_x_continuous(
+#     breaks = 
+#       (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#            length.out = 4) %>% 
+#          round()) 
+#   )+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in ",
+#     y = paste0("CI width"),
+#     x = "Year"
+#   )
+# ciWidthPlt
+# 
+# 
+# fullCiPlot <- 
+#   ggarrange(
+#     ciPlot, ciWidthPlt, common.legend = T, legend = "right"
+#   )
+# fullCiPlot
+# 
+# #explore end
+# if(F){
+#   ggsave(plot = fullCiPlot, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+#          device = "pdf", width = 10, height = 5) #ursprl 4
+# }
+# if(F){
+#   ggsave(plot = fullCiPlot2, filename = here("results/plotCaseStudyCbandsRel.pdf"),
+#          device = "pdf", width = 10, height = 5) #ursprl 4
+# }
 
 #Jrssb
-
-textSize <- 20
-themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
-                   strip.background = element_rect(color = "black", 
-                                                   fill = "lightgrey", size = 0.2),
-                   axis.title.x = element_text(size = textSize),
-                   axis.title.y = element_text(size = textSize),
-                   axis.text.y =element_text(size=textSize), 
-                   axis.text.x =element_text(size=textSize),
-                   strip.text.x = element_text(size = textSize),
-                   strip.text.y = element_text(size = textSize),
-                   plot.title = element_text(hjust = 0.5, size = textSize, 
-                                             face = "bold"), 
-                   #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
-                   legend.position = "right",
-                   legend.title = element_text(size = textSize),
-                   legend.text = element_text(size = textSize))
-
-ciPlotJrssb <- 
-  ciTibPlt %>% 
-  ggplot(aes(x = year))+
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type, col = type), alpha = 0.4,
-              linewidth = 0.5)+
-  geom_line(
-    data = ciTibPlt,
-    aes(x = year, y = estim, col = type), linewidth = 1.1)+
-  #scale_y_continuous(limits = c(0,70))+
-  scale_x_continuous(
-    breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-          length.out = 4) %>% 
-      round()
-  )+
-  scale_color_manual(
-    values = ownPalette
-  )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in",
-    y = paste0("Precipitation"),
-    x = "Year",
-    col = "Bootstrap:",
-    fill = "Bootstrap:"
-  )
-ciPlotJrssb
-
-ciWidthPltJrssb <- 
-  ciTibPlt %>% mutate(width = upper - lower) %>%  
-  ggplot(aes(x = year, y = width, col = type))+
-  geom_line(linewidth = 1.1)+
-  scale_x_continuous(
-    breaks = 
-      (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-           length.out = 4) %>% 
-         round()) 
-  )+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in ",
-    y = paste0("CI width"),
-    x = "Year"
-  )
-ciWidthPltJrssb
-
-fullCiPlotJrssb <- 
-  ggarrange(
-    ciPlotJrssb, ciWidthPltJrssb, common.legend = T, legend = "right", nrow = 2
-  )
-fullCiPlotJrssb
-if(F){
-  ggsave(plot = fullCiPlotJrssb, 
-         filename = here("results/plotCaseStudyCbandsMainJrssb.pdf"),
-         device = "pdf", width = 11, height = 5) #ursprl 4
-}
-ciTibPlt
+# 
+# textSize <- 20
+# themePlot <- theme(panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+#                    strip.background = element_rect(color = "black", 
+#                                                    fill = "lightgrey", size = 0.2),
+#                    axis.title.x = element_text(size = textSize),
+#                    axis.title.y = element_text(size = textSize),
+#                    axis.text.y =element_text(size=textSize), 
+#                    axis.text.x =element_text(size=textSize),
+#                    strip.text.x = element_text(size = textSize),
+#                    strip.text.y = element_text(size = textSize),
+#                    plot.title = element_text(hjust = 0.5, size = textSize, 
+#                                              face = "bold"), 
+#                    #panel.background = element_rect(rgb(0.95, 0.95, 0.95, alpha = 1)),
+#                    legend.position = "right",
+#                    legend.title = element_text(size = textSize),
+#                    legend.text = element_text(size = textSize))
+# 
+# ciPlotJrssb <- 
+#   ciTibPlt %>% 
+#   ggplot(aes(x = year))+
+#   geom_ribbon(aes(ymin = lower, ymax = upper, fill = type, col = type), alpha = 0.4,
+#               linewidth = 0.5)+
+#   geom_line(
+#     data = ciTibPlt,
+#     aes(x = year, y = estim, col = type), linewidth = 1.1)+
+#   #scale_y_continuous(limits = c(0,70))+
+#   scale_x_continuous(
+#     breaks = 
+#       seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#           length.out = 4) %>% 
+#       round()
+#   )+
+#   scale_color_manual(
+#     values = ownPalette
+#   )+
+#   #facet_wrap(vars(ciType), 
+#   #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in",
+#     y = paste0("Precipitation"),
+#     x = "Year",
+#     col = "Bootstrap:",
+#     fill = "Bootstrap:"
+#   )
+# ciPlotJrssb
+# 
+# ciWidthPltJrssb <- 
+#   ciTibPlt %>% mutate(width = upper - lower) %>%  
+#   ggplot(aes(x = year, y = width, col = type))+
+#   geom_line(linewidth = 1.1)+
+#   scale_x_continuous(
+#     breaks = 
+#       (seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#            length.out = 4) %>% 
+#          round()) 
+#   )+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in ",
+#     y = paste0("CI width"),
+#     x = "Year"
+#   )
+# ciWidthPltJrssb
+# 
+# fullCiPlotJrssb <- 
+#   ggarrange(
+#     ciPlotJrssb, ciWidthPltJrssb, common.legend = T, legend = "right", nrow = 2
+#   )
+# fullCiPlotJrssb
+# if(F){
+#   ggsave(plot = fullCiPlotJrssb, 
+#          filename = here("results/plotCaseStudyCbandsMainJrssb.pdf"),
+#          device = "pdf", width = 11, height = 5) #ursprl 4
+# }
+# ciTibPlt
 
 #case study for the mean estimation of Precipitation----
 
@@ -522,149 +524,149 @@ ciTibPltMean$type <-
     levels = c("cb", "db"),
     labels = c("cb" = "cb(2)", "db" = "db")
   )
-ciTibPltMean
-
-avgPrecDbMean <- (precDb %>% 
-                stats::filter(sides = 1, filter = c(1/2,1/2)))[-1]
-
-ciPlotMean <- 
-  ciTibPltMean %>%  
-  ggplot(aes(x = year))+
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
-              linewidth = 0.1, col = "black")+
-  geom_line(
-    data = ciTibPltMean,
-    aes(x = year, y = estim, col = type), linewidth = 1)+
- # scale_y_continuous(limits = c(0,70))+
-  scale_x_continuous(
-    breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-          length.out = 4) %>% 
-      round()
-  )+
-  scale_color_manual(
-    values = ownPalette
-  )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in",
-    y = paste0("Precipitation"),
-    x = "Year",
-    col = "Bootstrap:",
-    fill = "Bootstrap:"
-  )
-ciPlotMean
-
-ciTibPltMean <- ciTibPltMean %>% mutate(width = upper - lower) 
-ciWidthPltMean <- 
-  ciTibPltMean %>% 
-  ggplot(aes(x = year, y = width, col = type))+
-  geom_line(linewidth = 1.1)+
-  scale_x_continuous(
-    breaks = 
-      (seq((ciTibPltMean$year)[1], (ciTibPltMean$year)[nY - winSize], 
-           length.out = 4) %>% 
-         round()) 
-  )+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in ",
-    y = paste0("CI width"),
-    x = "Year"
-  )
-ciWidthPltMean
 
 
-fullCiPlotMean <- 
-  ggarrange(
-    ciPlotMean, ciWidthPltMean, common.legend = T, legend = "right"
-  )
-fullCiPlotMean
+# avgPrecDbMean <- (precDb %>% 
+#                 stats::filter(sides = 1, filter = c(1/2,1/2)))[-1]
+# 
+# ciPlotMean <- 
+#   ciTibPltMean %>%  
+#   ggplot(aes(x = year))+
+#   geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4,
+#               linewidth = 0.1, col = "black")+
+#   geom_line(
+#     data = ciTibPltMean,
+#     aes(x = year, y = estim, col = type), linewidth = 1)+
+#  # scale_y_continuous(limits = c(0,70))+
+#   scale_x_continuous(
+#     breaks = 
+#       seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#           length.out = 4) %>% 
+#       round()
+#   )+
+#   scale_color_manual(
+#     values = ownPalette
+#   )+
+#   #facet_wrap(vars(ciType), 
+#   #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in",
+#     y = paste0("Precipitation"),
+#     x = "Year",
+#     col = "Bootstrap:",
+#     fill = "Bootstrap:"
+#   )
+# ciPlotMean
+# 
+# ciTibPltMean <- ciTibPltMean %>% mutate(width = upper - lower) 
+# ciWidthPltMean <- 
+#   ciTibPltMean %>% 
+#   ggplot(aes(x = year, y = width, col = type))+
+#   geom_line(linewidth = 1.1)+
+#   scale_x_continuous(
+#     breaks = 
+#       (seq((ciTibPltMean$year)[1], (ciTibPltMean$year)[nY - winSize], 
+#            length.out = 4) %>% 
+#          round()) 
+#   )+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in ",
+#     y = paste0("CI width"),
+#     x = "Year"
+#   )
+# ciWidthPltMean
+# 
+# 
+# fullCiPlotMean <- 
+#   ggarrange(
+#     ciPlotMean, ciWidthPltMean, common.legend = T, legend = "right"
+#   )
+# fullCiPlotMean
+# 
+# #explore end
+# if(F){
+#   ggsave(plot = fullCiPlotMean, filename = here("results/plotCaseStudyCbandsMain.pdf"),
+#          device = "pdf", width = 10, height = 5) #ursprl 4
+# }
 
-#explore end
-if(F){
-  ggsave(plot = fullCiPlotMean, filename = here("results/plotCaseStudyCbandsMain.pdf"),
-         device = "pdf", width = 10, height = 5) #ursprl 4
-}
+# #Jrssb
+# 
+# ciPlotMeanJrssb <- 
+#   ciTibPltMean %>% 
+#   ggplot(aes(x = year))+
+#   geom_ribbon(aes(ymin = lower, ymax = upper, fill = type, col = type), alpha = 0.4,
+#               linewidth = 0.5)+
+#   geom_line(
+#     data = ciTibPltMean,
+#     aes(x = year, y = estim, col = type), linewidth = 1.1)+
+#   #scale_y_continuous(limits = c(0,70))+
+#   scale_x_continuous(
+#     breaks = 
+#       seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
+#           length.out = 4) %>% 
+#       round()
+#   )+
+#   scale_color_manual(
+#     values = ownPalette
+#   )+
+#   #facet_wrap(vars(ciType), 
+#   #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in",
+#     y = paste0("Precipitation"),
+#     x = "Year",
+#     col = "Bootstrap:",
+#     fill = "Bootstrap:"
+#   )
+# ciPlotMeanJrssb
+# 
+# ciWidthPltMeanJrssb <-
+#   ciTibPltMean %>% mutate(width = upper - lower) %>%  
+#   ggplot(aes(x = year, y = width, col = type))+
+#   geom_line(linewidth = 1.1)+
+#   scale_x_continuous(
+#     breaks = 
+#       (seq((ciTibPltMean$year)[1], (ciTibPltMean$year)[nY - winSize], 
+#            length.out = 4) %>% 
+#          round()) 
+#   )+
+#   themePlot+
+#   theme(
+#     plot.title = element_blank(),
+#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+#   )+
+#   labs(
+#     title = "Precipitation heigth in ",
+#     y = paste0("CI width"),
+#     x = "Year"
+#   )
+# ciWidthPltMeanJrssb
 
-#Jrssb
-
-ciPlotMeanJrssb <- 
-  ciTibPltMean %>% 
-  ggplot(aes(x = year))+
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type, col = type), alpha = 0.4,
-              linewidth = 0.5)+
-  geom_line(
-    data = ciTibPltMean,
-    aes(x = year, y = estim, col = type), linewidth = 1.1)+
-  #scale_y_continuous(limits = c(0,70))+
-  scale_x_continuous(
-    breaks = 
-      seq((ciTibPlt$year)[1], (ciTibPlt$year)[nY - winSize], 
-          length.out = 4) %>% 
-      round()
-  )+
-  scale_color_manual(
-    values = ownPalette
-  )+
-  #facet_wrap(vars(ciType), 
-  #           labeller = labeller(ciType = c(bstrDb = "db", bstr = "cb")))+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in",
-    y = paste0("Precipitation"),
-    x = "Year",
-    col = "Bootstrap:",
-    fill = "Bootstrap:"
-  )
-ciPlotMeanJrssb
-
-ciWidthPltMeanJrssb <-
-  ciTibPltMean %>% mutate(width = upper - lower) %>%  
-  ggplot(aes(x = year, y = width, col = type))+
-  geom_line(linewidth = 1.1)+
-  scale_x_continuous(
-    breaks = 
-      (seq((ciTibPltMean$year)[1], (ciTibPltMean$year)[nY - winSize], 
-           length.out = 4) %>% 
-         round()) 
-  )+
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )+
-  labs(
-    title = "Precipitation heigth in ",
-    y = paste0("CI width"),
-    x = "Year"
-  )
-ciWidthPltMeanJrssb
-
-fullCiMeanPlotJrssb <- 
-  ggarrange(
-    ciPlotMeanJrssb, ciWidthPltMeanJrssb, common.legend = T, legend = "right", nrow = 2
-  )
-fullCiMeanPlotJrssb
-if(F){
-  ggsave(plot = fullCiMeanPlotJrssb, 
-         filename = here("results/plotCaseStudyCbandsMeanMainJrssb.pdf"),
-         device = "pdf", width = 11, height = 5) #ursprl 4
-}
+# fullCiMeanPlotJrssb <- 
+#   ggarrange(
+#     ciPlotMeanJrssb, ciWidthPltMeanJrssb, common.legend = T, legend = "right", nrow = 2
+#   )
+# fullCiMeanPlotJrssb
+# if(F){
+#   ggsave(plot = fullCiMeanPlotJrssb, 
+#          filename = here("results/plotCaseStudyCbandsMeanMainJrssb.pdf"),
+#          device = "pdf", width = 11, height = 5) #ursprl 4
+# }
 
 tib_mean_cs <- 
   bind_rows(ciTibPltMean %>% mutate(parameter = "mean"),
@@ -684,58 +686,6 @@ tibble_ci$parameter <- factor(tibble_ci$parameter, levels = c("rl", "mean"),
 tibble_width <- tib_mean_cs %>% mutate(panel = "CI Width")
 tibble_width$parameter <- factor(tibble_width$parameter, levels = c("rl", "mean"), 
                                  labels = c("Return Level", "Mean"))
-tibble_combined <- bind_rows(tibble_ci, tibble_width)
-
-
-
-# 3️⃣ Plot mit `facet_wrap` und `scales = "free_y"`
-plotCombCs <- 
-  ggplot(tibble_combined) +
-  
-  # 🔹 1. Facet-Row: Estimate mit Konfidenzintervall
-  geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = type), alpha = 0.4, data = tibble_ci, col = "black", linewidth = 0.1) +
-  geom_line(aes(x = year, y = estim, color = type), linewidth = 1.1, 
-            data = tibble_ci) +
-  
-  # 🔹 2. Facet-Row: CI Width
-  geom_line(aes(x = year, y = width, color = type), linewidth = 1.1, 
-            data = tibble_width) +
-  
-  # 🎨 Faceting nach `parameter` (Spalten) & `panel` (Zeilen)
-  facet_wrap(vars(panel, parameter), scales = "free_y", ncol = length(unique(tibble_combined$parameter))) +
-  
-  # 🏷️ Labels & Design
-  labs(
-    x = "Year",
-    y = "",
-    color = "Bootstrap:",
-    fill = "Bootstrap:",
-    title = "Comparison of CI Estimation & Width"
-  ) +
-  themePlot+
-  theme(
-    plot.title = element_blank(),
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  )
-plotCombCs
-
-
-#erster Plot 2x1 Return Level
-
-
-# Wandle den Faktor um
-# Richtige Levels und Labels definieren
-# Panel-Reihenfolge sauber setzen
-# tibble_combined$panel <- factor(as.character(tibble_combined$panel),
-#                                 levels = c("Confidence Interval", "CI Width"))
-# tibble_ci$panel <- factor(as.character(tibble_ci$panel),
-#                           levels = c("Confidence Interval", "CI Width"))
-# tibble_width$panel <- factor(as.character(tibble_width$panel),
-#                              levels = c("Confidence Interval", "CI Width"))
-
-
-
-
 type_levels <- c("db", "cb(2)")
 type_labels <- c("db" = "db", "cb(2)" = "sb-cb")
 
@@ -748,9 +698,13 @@ set_panel_order <- function(df) {
                     labels = type_labels)
   df
 }
-tibble_combined <- set_panel_order(tibble_combined)
+
 tibble_ci       <- set_panel_order(tibble_ci)
-tibble_width    <- set_panel_order(tibble_width)
+tibble_width    <- set_panel_order(tibble_width) %>% 
+  mutate(width = upper - lower)
+
+tibble_combined <- 
+  bind_rows(tibble_ci, tibble_width)
 
 
 
@@ -1156,5 +1110,185 @@ if(F){
   ggsave(plot = plotCombCs, 
          filename = here("results/plotCaseStudy.pdf"),
          device = "pdf", width = 11, height = 8) #ursprl 4
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==========================
+# 1. Load Required Libraries
+# ==========================
+library(readr)      # Data import
+library(tidyr)      # Data wrangling
+library(dplyr)      # Data manipulation
+library(ggplot2)    # Plotting
+library(ggpubr)     # Arranging plots
+library(here)       # Relative file paths
+library(Rcpp)       # C++ integration
+library(magrittr)   # Pipe and tidyverse compatibility
+
+# ==========================
+# 2. Load Source Files
+# ==========================
+source(here("src/0source.R"))
+source(here("src/0source_ts.R"))
+sourceCpp(here("src/0sourceC.cpp"))
+sourceCpp(here("src/0sourceCn.cpp"))
+source(here("src/sourceCase.R"))
+source(here("src/theme.R"))
+
+# ==========================================
+# 3. Download & Load Precipitation Dataset
+# ==========================================
+downLink <- "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_02290_17810101_20231231_hist.zip"
+download.file(downLink, "data.zip")
+fileName <- "produkt_klima_tag_17810101_20231231_02290.txt"
+dataRaw <- unz("data.zip", fileName) %>% read_delim(delim = ";", trim_ws = TRUE)
+file.remove("data.zip")
+
+# ==================================
+# 4. Preprocess: Select and Clean
+# ==================================
+data <- dataRaw %>%
+  select(MESS_DATUM, RSK, TXK) %>%
+  rename(day = MESS_DATUM) %>%
+  mutate(day = as.Date(as.character(day), format = "%Y%m%d")) %>%
+  filter(RSK >= 0, TXK > -999) %>%
+  mutate(year = as.numeric(format(day, "%Y")))
+
+# ===============================
+# 5. Check for Missing Years
+# ===============================
+# This can be visualized or checked with table() or plots
+# For simplicity, assume visual inspection done
+
+# ==============================
+# 6. Extract Annual Maxima
+# ==============================
+precDb <- data %>% group_by(year) %>% summarise(max_precip = max(RSK)) %>% pull(max_precip)
+tempDb <- data %>% group_by(year) %>% summarise(max_temp = max(TXK)) %>% pull(max_temp)
+yearVec <- sort(unique(data$year))
+nY <- length(yearVec)
+
+# ============================
+# 7. Placeholder for Output Arrays
+# ============================
+DbArr <- array(dim = c(nY - 39, 3))
+CbArr <- array(dim = c(nY - 39, 3))
+winSize <- 40
+blockSize <- 365
+
+# =============================
+# 8. Estimation Loop (deactivated by if(FALSE))
+# =============================
+# This loop calls user-defined bootstrap CI functions from sourceCpp and sourceCase.R
+# Results are loaded from precomputed file for reproducibility and performance
+
+load(file = file.path("data", "array_rl_cs-0.30.5"))
+
+# ============================
+# 9. Combine into Tibble
+# ============================
+ciTib <- bind_rows(
+  tibble(year = yearVec[1:(nY - winSize + 1)] + winSize, type = "db", estim = DbArr[,1], lower = DbArr[,2], upper = DbArr[,3]),
+  tibble(year = yearVec[1:(nY - winSize + 1)] + winSize, type = "cb", estim = CbArr[,1], lower = CbArr[,2], upper = CbArr[,3])
+)
+
+# ============================
+# 10. Apply Correction Factors
+# ============================
+load("data/coeff_rl0.5")
+shape_est <- (precDb %>% fgev())$par[3]
+corr_factor <- coeff_rl[1] + shape_est * coeff_rl[2] + winSize * coeff_rl[3]
+
+ciTib <- ciTib %>% mutate(
+  lower = (lower - estim) * corr_factor + lower,
+  upper = (upper - estim) * corr_factor + upper
+)
+
+# =============================
+# 11. Smooth over Two-Year Window
+# =============================
+avgCiTib <- ciTib %>%
+  group_by(type) %>%
+  mutate(
+    estim = stats::filter(estim, filter = c(0.5, 0.5), sides = 1),
+    lower = stats::filter(lower, filter = c(0.5, 0.5), sides = 1),
+    upper = stats::filter(upper, filter = c(0.5, 0.5), sides = 1)
+  ) %>%
+  ungroup() %>%
+  filter(!is.na(estim))
+
+# ==============================
+# 12. Final Preprocessing for Plotting
+# ==============================
+ciTibPlt <- avgCiTib %>%
+  mutate(type = factor(type, levels = c("cb", "db"), labels = c("cb(2)", "db")))
+
+# ==============================
+# 13. Define Custom Theme
+# ==============================
+textSize <- 20
+themePlot <- theme(
+  panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+  strip.background = element_rect(color = "black", fill = "lightgrey", size = 0.2),
+  axis.title = element_text(size = textSize),
+  axis.text = element_text(size = textSize),
+  strip.text = element_text(size = textSize),
+  plot.title = element_text(hjust = 0.5, size = textSize, face = "bold"),
+  legend.position = "right",
+  legend.title = element_text(size = textSize),
+  legend.text = element_text(size = textSize)
+)
+
+ownPalette <- c("cb(2)" = "#F8766D", "db" = "#00BFC4")
+
+# ==============================
+# 14. Plotting CI and Width
+# ==============================
+ciTibPlt <- ciTibPlt %>% mutate(width = upper - lower)
+
+ciPlot <- ggplot(ciTibPlt, aes(x = year)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = type), alpha = 0.4, color = "black", linewidth = 0.1) +
+  geom_line(aes(y = estim, color = type), linewidth = 1) +
+  scale_color_manual(values = ownPalette) +
+  scale_fill_manual(values = ownPalette) +
+  themePlot +
+  labs(x = "Year", y = "Precipitation", fill = "Bootstrap:", color = "Bootstrap:") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+ciWidthPlot <- ggplot(ciTibPlt, aes(x = year, y = width, color = type)) +
+  geom_line(linewidth = 1.1) +
+  scale_color_manual(values = ownPalette) +
+  themePlot +
+  labs(x = "Year", y = "CI Width") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# ==============================
+# 15. Combine Plots
+# ==============================
+fullCiPlot <- ggarrange(
+  ciPlot,
+  ciWidthPlot,
+  common.legend = TRUE,
+  legend = "right"
+)
+
+# ==============================
+# 16. Save Plot
+# ==============================
+if (FALSE) {
+  ggsave(plot = fullCiPlot,
+         filename = here("results/plotCaseStudyCbandsMain.pdf"),
+         device = "pdf", width = 10, height = 5)
 }
 
