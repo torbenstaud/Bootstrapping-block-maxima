@@ -1,7 +1,7 @@
 library(here)
 library(tidyverse)
 textSize <- 20
-source("0plot_theme.R")
+source(here("backend/0plot_theme.R"))
 section <- "1.Introduction"
 #analyze bstr/est errors by means of histograms
 gamma <- -0.2
@@ -83,10 +83,9 @@ plotRlTs_histsIntro <-
   )
 
 plotRlTs_histsIntro
-if(F){
+if(T){
   ggsave(plotRlTs_histsIntro, 
-         filename = sprintf("plotRlHistsIntroTs%.1f%.1f%g%g.pdf",
-                            gamma, beta, m, r),
+         filename = sprintf("Figure 1.pdf"),
          device = "pdf", path = file.path(here(section), "plots"),
          width = 13, height = 4)
 }
