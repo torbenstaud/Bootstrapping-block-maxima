@@ -27,10 +27,10 @@ facet_labels_beta <-
 
 dataPath <- here(file.path("backend", "data", "6"))
 
-#Alle harcoded variablen definieren
+
 gammaVec <- c(-0.2, -0.1, 0, 0.1, 0.2)
 gammaVecPub <- c(-0.2, 0, 0.2)
-betaVec <- c(0, 0.5) #iid und einmal ARMAX(0.5)
+betaVec <- c(0, 0.5) 
 mVec <- seq(40,100, by = 10)
 r <- 365
 N <- 10**3
@@ -42,7 +42,7 @@ Time <- 100
 level <- 0.05
 
 #bootstrap performance results----
-#array mit CIs laden
+#load array with CIs
 load(file.path(dataPath,"full_array_cis_ts.dat"))
 
 
@@ -51,7 +51,7 @@ array_avg_ci_widths <-
   apply(array_cis_full, c(1,2,3,4,5,6), function(xx) xx[3] - xx[2]) %>% 
   apply(c(2,3,4,5,6), mean)
 
-#Transformiere in lesbares tibble
+#Transformiere to readable tibble
 parameter_names <- c("location", "scale", "shape", "return_level(100,365)", "mean", 
                      "return_level(75,365)", "return_level(50,365)")
 method_names <- c("sb", "db", "cb(2)")
@@ -100,8 +100,8 @@ ciRlWidthRelPlotJrssb <-
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 
-#nun empirical coverage ----
-##zunächst wahrheit laden
+#empirical coverage ----
+##load truth
 load(file.path(dataPath,"truth_array.dat"))
 
 #name: array_cis_full; dim [N, 5, 2, 7, 5, 3, 3]

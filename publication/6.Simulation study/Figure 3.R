@@ -10,10 +10,10 @@ textSize <- 20
 source(here("backend/0plot_theme.R"))
 
 section <- "6.Simulation study"
-#Alle harcoded variablen definieren
+
 gammaVec <- c(-0.2, -0.1, 0, 0.1, 0.2)
 gammaVecPub <- c(-0.2, 0, 0.2)
-betaVec <- c(0, 0.5) #iid und einmal ARMAX(0.5)
+betaVec <- c(0, 0.5) 
 mVec <- seq(40,100, by = 10)
 r <- 365
 N <- 10**3
