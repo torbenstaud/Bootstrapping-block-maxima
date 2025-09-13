@@ -398,19 +398,19 @@ plotRlCsPrcp
 plotMeanCsPrcp <- 
   ggplot(tibble_combined %>% filter(parameter == "Mean")) +
   
-  # 🔹 1. Facet-Row: Estimate with CI
+  #  1. Facet-Row: Estimate with CI
   geom_ribbon(aes(x = year, ymin = lower, ymax = upper, fill = type), alpha = 0.4, data = tibble_ci %>% filter(parameter == "Mean"), col = "black", linewidth = 0.1) +
   geom_line(aes(x = year, y = estim, color = type), linewidth = 1.1, 
             data = tibble_ci %>% filter(parameter == "Mean")) +
   
-  # 🔹 2. Facet-Row: CI Width
+  # 2. Facet-Row: CI Width
   geom_line(aes(x = year, y = width, color = type), linewidth = 1.1, 
             data = tibble_width %>% filter(parameter == "Mean")) +
   
-  # 🎨 Faceting via `parameter` (Col) & `panel` (Row)
+  #  Faceting via `parameter` (Col) & `panel` (Row)
   facet_grid(rows = vars(panel), cols = vars(parameter), scales = "free_y") +
   
-  # 🏷️ Labels & Design
+  # ️ Labels & Design
   labs(
     x = "Year",
     y = "",
