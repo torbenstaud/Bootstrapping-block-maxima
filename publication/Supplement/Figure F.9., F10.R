@@ -279,7 +279,7 @@ combCiPlotMainJrssb
 
 if(TRUE){
   ggsave(combCiPlotMainJrssb, path = plotPath, 
-         filename = "Figure 10.pdf", device = "pdf",
+         filename = "Figure F.10.pdf", device = "pdf",
          width = 13, height = 7
   )
 }
