@@ -109,7 +109,7 @@ pltApplEstPerf <-
     align = "hv",
     widths = c(1, 1, 1)       # gleiche Breite
   )  
-pltApplEstPerf
+
 if(T){
   ggsave(pltApplEstPerf, 
          filename = "Figure 9.pdf",
